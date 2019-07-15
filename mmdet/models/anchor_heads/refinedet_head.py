@@ -10,6 +10,9 @@ from ..losses import smooth_l1_loss
 from ..registry import HEADS
 from ..losses import refinedet_multibox_loss
 
+from math import sqrt as sqrt
+from itertools import product as product
+
 
 # TODO: add loss evaluator for SSD
 @HEADS.register_module
@@ -147,6 +150,45 @@ class RefineDetHead(AnchorHead):
             avg_factor=num_total_samples)
         return loss_cls[None], loss_bbox
 
+    def get_anchors(self, featmap_sizes, img_metas):
+
+        steps = [8, 16, 32, 64]
+        min_sizes = [32, 64, 128, 256]
+        max_sizes = []
+        aspect_ratios = [[2], [2], [2], [2]]
+        clip = True
+
+        mean = []
+        for k, f in enumerate(featmap_sizes):
+            f = f[0]
+            for i, j in product(range(f), repeat=2):
+                f_k = self.input_size / steps[k]
+                # unit center x,y
+                cx = (j + 0.5) / f_k
+                cy = (i + 0.5) / f_k
+
+                # aspect_ratio: 1
+                # rel size: min_size
+                s_k = min_sizes[k] / self.input_size
+                mean += [cx, cy, s_k, s_k]
+
+                # aspect_ratio: 1
+                # rel size: sqrt(s_k * s_(k+1))
+                if max_sizes:
+                    s_k_prime = sqrt(s_k * (max_sizes[k] / self.input_size))
+                    mean += [cx, cy, s_k_prime, s_k_prime]
+
+                # rest of aspect ratios
+                for ar in aspect_ratios[k]:
+                    mean += [cx, cy, s_k * sqrt(ar), s_k / sqrt(ar)]
+                    mean += [cx, cy, s_k / sqrt(ar), s_k * sqrt(ar)]
+        # back to torch land
+        output = torch.Tensor(mean).view(-1, 4)
+        if clip:
+            output.clamp_(max=1, min=0)
+        return output.cuda()
+
+
     def loss(self, arm_cls, arm_reg, odm_cls, odm_reg, gt_bboxes,
              gt_labels, img_metas, cfg, gt_bboxes_ignore=None):
 
@@ -154,14 +196,9 @@ class RefineDetHead(AnchorHead):
         assert len(featmap_sizes) == len(self.anchor_generators)
 
         assert len(arm_cls) == len(arm_reg)
-        num_levels = len(arm_cls)
-        print(arm_cls[0].size())
-        mlvl_anchors = [
-            self.anchor_generators[i].grid_anchors(arm_cls[i].size()[-2:],
-                                                   self.anchor_strides[i])
-            for i in range(num_levels)
-        ]
-        anchors = torch.cat([o.view(o.size(0), -1) for o in mlvl_anchors], 0)
+
+        anchor_list = self.get_anchors(
+            featmap_sizes, img_metas)
 
         # process predict
         arm_criterion = refinedet_multibox_loss(2, 0.5, True, 0, True, 3, 0.5, False, self.target_stds)
@@ -182,18 +219,18 @@ class RefineDetHead(AnchorHead):
             arm_cls.view(arm_cls.size(0), -1, 2),
             odm_reg.view(odm_reg.size(0), -1, 4),
             odm_cls.view(odm_cls.size(0), -1, self.num_classes),
-            anchors
+            anchor_list
         )
 
         targets = (gt_bboxes, gt_labels)
 
         arm_reg_loss, arm_cls_loss = arm_criterion(predict, targets)
-        odm_reg_loss, odm_cls_loss = odm_criterion(predict, targets)
+        # odm_reg_loss, odm_cls_loss = odm_criterion(predict, targets)
 
         return dict(arm_reg_loss=arm_reg_loss,
-                    arm_cls_loss=arm_cls_loss,
-                    odm_reg_loss=odm_reg_loss,
-                    odm_cls_loss=odm_cls_loss)
+                    arm_cls_loss=arm_cls_loss)#,
+                    # odm_reg_loss=odm_reg_loss,
+                    # odm_cls_loss=odm_cls_loss)
 
     def add_tcb(self, in_channels):
         feature_scale_layers = []

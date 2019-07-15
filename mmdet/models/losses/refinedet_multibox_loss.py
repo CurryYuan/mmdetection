@@ -80,6 +80,7 @@ class refinedet_multibox_loss(nn.Module):
             # labels = targets[idx][:, -1].data
             truths, labels = targets
             truths = truths[idx]
+            truths = truths / 512
             labels = labels[idx]
             if num_classes == 2:
                 labels = labels >= 0

@@ -1,5 +1,5 @@
 # model settings
-input_size = 320
+input_size = 512
 model = dict(
     type='SingleStageDetector',
     pretrained='weights/vgg16_caffe-292e1171.pth',
@@ -21,7 +21,7 @@ model = dict(
         anchor_ratios=[0.5, 1.0, 2.0],
         anchor_strides=(8, 16, 32, 64),
         target_means=(.0, .0, .0, .0),
-        target_stds=(0.1, 0.1, 0.2, 0.2)))
+        target_stds=(0.1, 0.2)))
 cudnn_benchmark = True
 train_cfg = dict(
     assigner=dict(
@@ -47,7 +47,7 @@ dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
 img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
 data = dict(
-    imgs_per_gpu=2,
+    imgs_per_gpu=1,
     workers_per_gpu=1,
     train=dict(
         type='RepeatDataset',
@@ -102,7 +102,7 @@ data = dict(
         test_mode=True,
         resize_keep_ratio=False))
 # optimizer
-optimizer = dict(type='SGD', lr=2e-2, momentum=0.9, weight_decay=5e-4)
+optimizer = dict(type='SGD', lr=1e-2, momentum=0.9, weight_decay=5e-4)
 optimizer_config = dict()
 # learning policy
 lr_config = dict(
