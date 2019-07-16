@@ -102,7 +102,7 @@ data = dict(
         test_mode=True,
         resize_keep_ratio=False))
 # optimizer
-optimizer = dict(type='SGD', lr=1e-2, momentum=0.9, weight_decay=5e-4)
+optimizer = dict(type='SGD', lr=1e-3, momentum=0.9, weight_decay=5e-4)
 optimizer_config = dict()
 # learning policy
 lr_config = dict(
@@ -124,7 +124,7 @@ log_config = dict(
 total_epochs = 24
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/refineDet'
+work_dir = './work_dirs/refinedet512_coco'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]

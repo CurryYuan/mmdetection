@@ -22,7 +22,7 @@ class RefineDetVGG(VGG):
                  with_last_pool=False,
                  ceil_mode=True,
                  out_indices=(3, 4),
-                 out_feature_indices=(22, 30),
+                 out_feature_indices=(22, 29),
                  l2_norm_scale=20.):
         super(RefineDetVGG, self).__init__(
             depth,
@@ -37,7 +37,7 @@ class RefineDetVGG(VGG):
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1))
         self.features.add_module(
             str(len(self.features)),
-            nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6))
+            nn.Conv2d(512, 1024, kernel_size=3, padding=3, dilation=3))
         self.features.add_module(
             str(len(self.features)), nn.ReLU(inplace=True))
         self.features.add_module(
@@ -48,9 +48,9 @@ class RefineDetVGG(VGG):
 
         self.inplanes = 1024
         self.extra = self._make_extra_layers(self.extra_setting[input_size])
-        self.l2_norm = L2Norm(
-            self.features[out_feature_indices[0] - 1].out_channels,
-            l2_norm_scale)
+        # Layer learns to scale the l2 normalized features from conv4_3
+        self.l2_norm1 = L2Norm(512, 10, l2_norm_scale)
+        self.l2_norm2 = L2Norm(512, 8, l2_norm_scale)
 
     def init_weights(self, pretrained=None):
         if isinstance(pretrained, str):
@@ -71,19 +71,22 @@ class RefineDetVGG(VGG):
             if isinstance(m, nn.Conv2d):
                 xavier_init(m, distribution='uniform')
 
-        constant_init(self.l2_norm, self.l2_norm.scale)
+        constant_init(self.l2_norm1, self.l2_norm1.scale)
+        constant_init(self.l2_norm2, self.l2_norm2.scale)
 
     def forward(self, x):
         outs = []
         for i, layer in enumerate(self.features):
             x = layer(x)
             if i in self.out_feature_indices:
-                outs.append(x)
+                if i == 22:
+                    outs.append(self.l2_norm1(x))
+                elif i == 29:
+                    outs.append(self.l2_norm2(x))
         for i, layer in enumerate(self.extra):
             x = F.relu(layer(x), inplace=True)
             if i % 2 == 1:
                 outs.append(x)
-        outs[0] = self.l2_norm(outs[0])
         if len(outs) == 1:
             return outs[0]
         else:

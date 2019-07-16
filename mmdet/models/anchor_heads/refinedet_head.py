@@ -87,6 +87,8 @@ class RefineDetHead(AnchorHead):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 xavier_init(m, distribution='uniform', bias=0)
+            elif isinstance(m, nn.ConvTranspose2d):
+                xavier_init(m, distribution='uniform', bias=0)
 
     def forward(self, feats):
 
@@ -225,12 +227,12 @@ class RefineDetHead(AnchorHead):
         targets = (gt_bboxes, gt_labels)
 
         arm_reg_loss, arm_cls_loss = arm_criterion(predict, targets)
-        # odm_reg_loss, odm_cls_loss = odm_criterion(predict, targets)
+        odm_reg_loss, odm_cls_loss = odm_criterion(predict, targets)
 
         return dict(arm_reg_loss=arm_reg_loss,
-                    arm_cls_loss=arm_cls_loss)#,
-                    # odm_reg_loss=odm_reg_loss,
-                    # odm_cls_loss=odm_cls_loss)
+                    arm_cls_loss=arm_cls_loss,
+                    odm_reg_loss=odm_reg_loss,
+                    odm_cls_loss=odm_cls_loss)
 
     def add_tcb(self, in_channels):
         feature_scale_layers = []

@@ -66,6 +66,7 @@ class refinedet_multibox_loss(nn.Module):
             loc_data, conf_data = odm_loc_data, odm_conf_data
         else:
             loc_data, conf_data = arm_loc_data, arm_conf_data
+
         num = loc_data.size(0)
         priors = priors[:loc_data.size(1), :]
         num_priors = (priors.size(0))
@@ -75,13 +76,13 @@ class refinedet_multibox_loss(nn.Module):
         # match priors (default boxes) and ground truth boxes
         loc_t = torch.Tensor(num, num_priors, 4)
         conf_t = torch.LongTensor(num, num_priors)
+        truths_list, labels_list = targets
         for idx in range(num):
             # truths = targets[idx][:, :-1].data
             # labels = targets[idx][:, -1].data
-            truths, labels = targets
-            truths = truths[idx]
+            truths = truths_list[idx]
             truths = truths / 512
-            labels = labels[idx]
+            labels = labels_list[idx] - 1
             if num_classes == 2:
                 labels = labels >= 0
             defaults = priors.data
@@ -121,11 +122,14 @@ class refinedet_multibox_loss(nn.Module):
 
         # Compute max conf across batch for hard negative mining
         batch_conf = conf_data.view(-1, self.num_classes)
+        # print((conf_t).max(1))
+        # print((conf_t).min(1))
         loss_c = log_sum_exp(batch_conf) - batch_conf.gather(1, conf_t.view(-1, 1))
         #print(loss_c.size())
 
         # Hard Negative Mining
-        loss_c[pos.view(-1,1)] = 0  # filter out pos boxes for now
+        # loss_c = loss_c.cpu()
+        loss_c[pos.view(-1, 1)] = 0  # filter out pos boxes for now
         loss_c = loss_c.view(num, -1)
         _, loss_idx = loss_c.sort(1, descending=True)
         _, idx_rank = loss_idx.sort(1)
