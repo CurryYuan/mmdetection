@@ -29,10 +29,11 @@ class refinedet_multibox_loss(nn.Module):
         See: https://arxiv.org/pdf/1512.02325.pdf for more details.
     """
 
-    def __init__(self, num_classes, overlap_thresh, prior_for_matching,
+    def __init__(self, input_size, num_classes, overlap_thresh, prior_for_matching,
                  bkg_label, neg_mining, neg_pos, neg_overlap, encode_target,
                  variance, use_gpu=True, theta=0.01, use_ARM=False):
         super(refinedet_multibox_loss, self).__init__()
+        self.input_size = input_size
         self.use_gpu = use_gpu
         self.num_classes = num_classes
         self.threshold = overlap_thresh
@@ -81,7 +82,7 @@ class refinedet_multibox_loss(nn.Module):
             # truths = targets[idx][:, :-1].data
             # labels = targets[idx][:, -1].data
             truths = truths_list[idx]
-            truths = truths / 512
+            truths = truths / self.input_size
             labels = labels_list[idx] - 1
             if num_classes == 2:
                 labels = labels >= 0

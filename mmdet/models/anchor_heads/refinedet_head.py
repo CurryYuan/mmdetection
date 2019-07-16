@@ -203,8 +203,9 @@ class RefineDetHead(AnchorHead):
             featmap_sizes, img_metas)
 
         # process predict
-        arm_criterion = refinedet_multibox_loss(2, 0.5, True, 0, True, 3, 0.5, False, self.target_stds)
-        odm_criterion = refinedet_multibox_loss(self.num_classes, 0.5, True, 0, True, 3, 0.5, False, self.target_stds, use_ARM=True)
+        arm_criterion = refinedet_multibox_loss(self.input_size, 2, 0.5, True, 0, True, 3, 0.5, False, self.target_stds)
+        odm_criterion = refinedet_multibox_loss(self.input_size, self.num_classes, 0.5, True, 0, True, 3, 0.5,
+                                                False, self.target_stds, use_ARM=True)
 
         arm_cls = torch.cat([o.permute(0, 2, 3, 1).contiguous().view(o.size(0), -1)
                              for o in arm_cls], 1)
