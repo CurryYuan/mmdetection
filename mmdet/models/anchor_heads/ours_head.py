@@ -13,8 +13,6 @@ from ..losses import refinedet_multibox_loss
 from math import sqrt as sqrt
 from itertools import product as product
 
-from mmdet.models.utils.refinedet_utils import decode, nms, center_size
-
 
 # TODO: add loss evaluator for SSD
 @HEADS.register_module
@@ -45,18 +43,17 @@ class RefineDetHead(AnchorHead):
 
         anchor_scales = 1
 
+        self.anchor_generators = []
+        for anchor_base in self.anchor_base_sizes:
+            self.anchor_generators.append(
+                AnchorGenerator(anchor_base, anchor_scales, anchor_ratios))
+
         self.num_anchors = len(anchor_ratios) * anchor_scales
 
         self.target_means = target_means
         self.target_stds = target_stds
         self.use_sigmoid_cls = False
         self.cls_focal_loss = False
-
-        self.conf_thresh = 0.01
-        self.objectness_thre = 0.01
-        self.top_k = 1000
-        self.nms_thresh = 0.45
-        self.keep_top_k = 500
 
         self._init_layers()
 
@@ -66,9 +63,9 @@ class RefineDetHead(AnchorHead):
         cls_convs = []
         for i in range(len(self.in_channels)):
             reg_convs.append(
-                nn.Conv2d(self.in_channels[i], self.num_anchors * 4, kernel_size=3, padding=1))
+                nn.Conv2d(self.in_channels[i], 1, kernel_size=1, padding=1))
             cls_convs.append(
-                nn.Conv2d(self.in_channels[i], self.num_anchors * 2, kernel_size=3, padding=1))
+                nn.Conv2d(self.in_channels[i], self.num_anchors * 2, kernel_size=1, padding=1))
         self.arm_reg = nn.ModuleList(reg_convs)
         self.arm_cls = nn.ModuleList(cls_convs)
 
@@ -89,7 +86,6 @@ class RefineDetHead(AnchorHead):
         self.odm_reg = nn.ModuleList(reg_convs)
         self.odm_cls = nn.ModuleList(cls_convs)
 
-        self.softmax = nn.Softmax(dim=-1)
 
     def init_weights(self):
         for m in self.modules():
@@ -107,7 +103,7 @@ class RefineDetHead(AnchorHead):
         odm_reg = list()
 
         # apply ARM to feats
-        for feat, reg_conv, cls_conv in zip(feats, self.arm_reg,self.arm_cls):
+        for feat, reg_conv, cls_conv in zip(feats, self.arm_reg, self.arm_cls):
             arm_cls.append(cls_conv(feat))
             arm_reg.append(reg_conv(feat))
 
@@ -133,8 +129,32 @@ class RefineDetHead(AnchorHead):
         for feat, reg_conv, cls_conv in zip(tcb_feats, self.odm_reg, self.odm_cls):
             odm_cls.append(cls_conv(feat))
             odm_reg.append(reg_conv(feat))
-        
+
         return arm_cls, arm_reg, odm_cls, odm_reg
+
+    def loss_single(self, cls_score, bbox_pred, labels, label_weights,
+                    bbox_targets, bbox_weights, num_total_samples, cfg):
+        loss_cls_all = F.cross_entropy(
+            cls_score, labels, reduction='none') * label_weights
+        pos_inds = (labels > 0).nonzero().view(-1)
+        neg_inds = (labels == 0).nonzero().view(-1)
+
+        num_pos_samples = pos_inds.size(0)
+        num_neg_samples = cfg.neg_pos_ratio * num_pos_samples
+        if num_neg_samples > neg_inds.size(0):
+            num_neg_samples = neg_inds.size(0)
+        topk_loss_cls_neg, _ = loss_cls_all[neg_inds].topk(num_neg_samples)
+        loss_cls_pos = loss_cls_all[pos_inds].sum()
+        loss_cls_neg = topk_loss_cls_neg.sum()
+        loss_cls = (loss_cls_pos + loss_cls_neg) / num_total_samples
+
+        loss_bbox = smooth_l1_loss(
+            bbox_pred,
+            bbox_targets,
+            bbox_weights,
+            beta=cfg.smoothl1_beta,
+            avg_factor=num_total_samples)
+        return loss_cls[None], loss_bbox
 
     def get_anchors(self, featmap_sizes, img_metas):
 
@@ -174,15 +194,16 @@ class RefineDetHead(AnchorHead):
             output.clamp_(max=1, min=0)
         return output.cuda()
 
-
     def loss(self, arm_cls, arm_reg, odm_cls, odm_reg, gt_bboxes,
              gt_labels, img_metas, cfg, gt_bboxes_ignore=None):
 
         featmap_sizes = [featmap.size()[-2:] for featmap in arm_cls]
+        assert len(featmap_sizes) == len(self.anchor_generators)
 
         assert len(arm_cls) == len(arm_reg)
 
-        prior_data = self.get_anchors(featmap_sizes, img_metas)
+        anchor_list = self.get_anchors(
+            featmap_sizes, img_metas)
 
         # process predict
         arm_criterion = refinedet_multibox_loss(self.input_size, 2, 0.5, True, 0, True, 3, 0.5, False, self.target_stds)
@@ -204,7 +225,7 @@ class RefineDetHead(AnchorHead):
             arm_cls.view(arm_cls.size(0), -1, 2),
             odm_reg.view(odm_reg.size(0), -1, 4),
             odm_cls.view(odm_cls.size(0), -1, self.num_classes),
-            prior_data
+            anchor_list
         )
 
         targets = (gt_bboxes, gt_labels)
@@ -216,97 +237,6 @@ class RefineDetHead(AnchorHead):
                     arm_cls_loss=arm_cls_loss,
                     odm_reg_loss=odm_reg_loss,
                     odm_cls_loss=odm_cls_loss)
-
-    def get_bboxes(self, arm_cls, arm_reg, odm_cls, odm_reg, img_metas, cfg,
-                   rescale=False):
-        """
-                Args:
-                    loc_data: (tensor) Loc preds from loc layers
-                        Shape: [batch,num_priors*4]
-                    conf_data: (tensor) Shape: Conf preds from conf layers
-                        Shape: [batch*num_priors,num_classes]
-                    prior_data: (tensor) Prior boxes and variances from priorbox layers
-                        Shape: [1,num_priors,4]
-                """
-
-        featmap_sizes = [featmap.size()[-2:] for featmap in arm_cls]
-        prior_data = self.get_anchors(featmap_sizes, img_metas)
-        num_priors = prior_data.size(0)
-
-        arm_cls = torch.cat([o.permute(0, 2, 3, 1).contiguous().view(o.size(0), -1)
-                             for o in arm_cls], 1)
-        arm_reg = torch.cat([o.permute(0, 2, 3, 1).contiguous().view(o.size(0), -1)
-                             for o in arm_reg], 1)
-
-        odm_cls = torch.cat([o.permute(0, 2, 3, 1).contiguous().view(o.size(0), -1)
-                             for o in odm_cls], 1)
-        odm_reg = torch.cat([o.permute(0, 2, 3, 1).contiguous().view(o.size(0), -1)
-                             for o in odm_reg], 1)
-
-        arm_reg = arm_reg.view(arm_reg.size(0), -1, 4)  # arm loc preds
-        arm_cls = self.softmax(arm_cls.view(arm_cls.size(0), -1, 2))  # arm conf preds
-        odm_reg = odm_reg.view(odm_reg.size(0), -1, 4)  # odm loc preds
-        odm_cls = self.softmax(odm_cls.view(odm_cls.size(0), -1, self.num_classes))
-
-        loc_data = odm_reg
-        conf_data = odm_cls
-
-        arm_object_conf = arm_cls.data[:, :, 1:]
-        no_object_index = arm_object_conf <= self.objectness_thre
-        conf_data[no_object_index.expand_as(conf_data)] = 0
-
-        num = loc_data.size(0)  # batch size
-        output = torch.zeros(num, self.num_classes, self.top_k, 5)
-        conf_preds = conf_data.view(num, num_priors, self.num_classes).transpose(2, 1)
-
-        det_bboxes = []
-        det_labels = []
-        result_list = []
-
-        # Decode predictions into bboxes.
-        for i in range(num):
-            default = decode(arm_reg[i], prior_data, self.target_stds)
-            default = center_size(default)
-            decoded_boxes = decode(loc_data[i], default, self.target_stds)
-            # For each class, perform nms
-            conf_scores = conf_preds[i].clone()
-            # print(decoded_boxes, conf_scores)
-            for cl in range(1, self.num_classes):
-                c_mask = conf_scores[cl].gt(self.conf_thresh)
-                scores = conf_scores[cl][c_mask]
-                # print(scores.dim())
-                if scores.size(0) == 0:
-                    continue
-                l_mask = c_mask.unsqueeze(1).expand_as(decoded_boxes)
-                boxes = decoded_boxes[l_mask].view(-1, 4)
-                # idx of highest scoring and non-overlapping boxes per class
-                # print(boxes, scores)
-                ids, count = nms(boxes, scores, self.nms_thresh, self.top_k)
-                # for j in range(count):
-                    # det_bboxes.append(torch.cat((scores[ids[j]].unsqueeze(0), boxes[ids[j]]), 0))
-                    # det_labels.append(cl-1)
-                output[i, cl, :count] = \
-                    torch.cat((scores[ids[:count]].unsqueeze(1),
-                               boxes[ids[:count]]), 1)
-        flt = output.contiguous().view(num, -1, 5)
-        _, idx = flt[:, :, 0].sort(1, descending=True)
-        _, rank = idx.sort(1)
-        flt[(rank < self.keep_top_k).unsqueeze(-1).expand_as(flt)].fill_(0)
-        return output
-
-        # det_bboxes = torch.cat([o.unsqueeze(0) for o in det_bboxes], 0)
-        # det_labels = torch.tensor(det_labels)
-        #
-        # w = img_metas[0]['img_shape'][0]
-        # h = img_metas[0]['img_shape'][1]
-        #
-        # det_bboxes[:, 0] *= w
-        # det_bboxes[:, 2] *= w
-        # det_bboxes[:, 1] *= h
-        # det_bboxes[:, 3] *= h
-        #
-        # result_list.append((det_bboxes, det_labels))
-        # return result_list
 
     def add_tcb(self, in_channels):
         feature_scale_layers = []

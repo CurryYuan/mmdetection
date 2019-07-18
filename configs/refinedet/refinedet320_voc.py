@@ -1,7 +1,7 @@
 # model settings
 input_size = 320
 model = dict(
-    type='SingleStageDetector',
+    type='RefineDet',
     pretrained='weights/vgg16_caffe-292e1171.pth',
     backbone=dict(
         type='RefineDetVGG',
@@ -16,12 +16,12 @@ model = dict(
     bbox_head=dict(
         type='RefineDetHead',
         input_size=input_size,
-        num_classes=81,
+        num_classes=21,
         in_channels=(512, 512, 1024, 512),
         anchor_ratios=[0.5, 1.0, 2.0],
         anchor_strides=(8, 16, 32, 64),
         target_means=(.0, .0, .0, .0),
-        target_stds=(0.1, 0.2)))
+        target_stds=[0.1, 0.2]))
 cudnn_benchmark = True
 train_cfg = dict(
     assigner=dict(
@@ -47,8 +47,8 @@ dataset_type = 'VOCDataset'
 data_root = 'data/VOCdevkit/'
 img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
 data = dict(
-    imgs_per_gpu=4,
-    workers_per_gpu=2,
+    imgs_per_gpu=16,
+    workers_per_gpu=8,
     train=dict(
         type='RepeatDataset',
         times=10,
@@ -84,7 +84,7 @@ data = dict(
         type=dataset_type,
         ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt',
         img_prefix=data_root + 'VOC2007/',
-        img_scale=(300, 300),
+        img_scale=(320, 320),
         img_norm_cfg=img_norm_cfg,
         size_divisor=None,
         flip_ratio=0,
@@ -123,6 +123,7 @@ log_config = dict(
         # dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
+evaluation = dict(interval=1)
 # runtime settings
 total_epochs = 24
 dist_params = dict(backend='nccl')

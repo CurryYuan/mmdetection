@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
-from .refinedet_utils import match, log_sum_exp, refine_match
+from mmdet.models.utils.refinedet_utils import log_sum_exp, refine_match
 from ..registry import LOSSES
 
 @LOSSES.register_module
