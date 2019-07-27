@@ -1,7 +1,7 @@
 # model settings
 model = dict(
     type='RetinaNet',
-    pretrained='open-mmlab://resnet50_caffe',
+    pretrained='weights/resnet50_caffe-788b5fa3.pth',
     backbone=dict(
         type='ResNet',
         depth=50,

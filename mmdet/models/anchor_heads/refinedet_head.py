@@ -107,7 +107,7 @@ class RefineDetHead(AnchorHead):
         odm_reg = list()
 
         # apply ARM to feats
-        for feat, reg_conv, cls_conv in zip(feats, self.arm_reg,self.arm_cls):
+        for feat, reg_conv, cls_conv in zip(feats, self.arm_reg, self.arm_cls):
             arm_cls.append(cls_conv(feat))
             arm_reg.append(reg_conv(feat))
 

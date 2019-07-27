@@ -12,9 +12,10 @@ from .fcos import FCOS
 from .grid_rcnn import GridRCNN
 from .mask_scoring_rcnn import MaskScoringRCNN
 from .refinedet import RefineDet
+from .my_detector import MyDetector
 
 __all__ = [
     'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
     'FastRCNN', 'FasterRCNN', 'MaskRCNN', 'CascadeRCNN', 'HybridTaskCascade',
-    'RetinaNet', 'FCOS', 'GridRCNN', 'MaskScoringRCNN', 'RefineDet'
+    'RetinaNet', 'FCOS', 'GridRCNN', 'MaskScoringRCNN', 'RefineDet', 'MyDetector'
 ]

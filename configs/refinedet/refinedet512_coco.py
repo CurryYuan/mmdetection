@@ -1,7 +1,7 @@
 # model settings
 input_size = 512
 model = dict(
-    type='SingleStageDetector',
+    type='RefineDet',
     pretrained='weights/vgg16_caffe-292e1171.pth',
     backbone=dict(
         type='RefineDetVGG',
@@ -16,12 +16,12 @@ model = dict(
     bbox_head=dict(
         type='RefineDetHead',
         input_size=input_size,
-        num_classes=81,
+        num_classes=21,
         in_channels=(512, 512, 1024, 512),
         anchor_ratios=[0.5, 1.0, 2.0],
         anchor_strides=(8, 16, 32, 64),
         target_means=(.0, .0, .0, .0),
-        target_stds=(0.1, 0.2)))
+        target_stds=[0.1, 0.2]))
 cudnn_benchmark = True
 train_cfg = dict(
     assigner=dict(
@@ -43,19 +43,22 @@ test_cfg = dict(
     max_per_img=200)
 # model training and testing settings
 # dataset settings
-dataset_type = 'CocoDataset'
-data_root = 'data/coco/'
+dataset_type = 'VOCDataset'
+data_root = 'data/VOCdevkit/'
 img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[1, 1, 1], to_rgb=True)
 data = dict(
-    imgs_per_gpu=1,
-    workers_per_gpu=1,
+    imgs_per_gpu=16,
+    workers_per_gpu=8,
     train=dict(
         type='RepeatDataset',
-        times=5,
+        times=10,
         dataset=dict(
             type=dataset_type,
-            ann_file=data_root + 'annotations/instances_train2017.json',
-            img_prefix=data_root + 'train2017/',
+            ann_file=[
+                data_root + 'VOC2007/ImageSets/Main/trainval.txt',
+                data_root + 'VOC2012/ImageSets/Main/trainval.txt'
+            ],
+            img_prefix=[data_root + 'VOC2007/', data_root + 'VOC2012/'],
             img_scale=(512, 512),
             img_norm_cfg=img_norm_cfg,
             size_divisor=None,
@@ -79,8 +82,8 @@ data = dict(
             resize_keep_ratio=False)),
     val=dict(
         type=dataset_type,
-        ann_file=data_root + 'annotations/instances_val2017.json',
-        img_prefix=data_root + 'val2017/',
+        ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt',
+        img_prefix=data_root + 'VOC2007/',
         img_scale=(512, 512),
         img_norm_cfg=img_norm_cfg,
         size_divisor=None,
@@ -91,8 +94,8 @@ data = dict(
         resize_keep_ratio=False),
     test=dict(
         type=dataset_type,
-        ann_file=data_root + 'annotations/instances_val2017.json',
-        img_prefix=data_root + 'val2017/',
+        ann_file=data_root + 'VOC2007/ImageSets/Main/test.txt',
+        img_prefix=data_root + 'VOC2007/',
         img_scale=(512, 512),
         img_norm_cfg=img_norm_cfg,
         size_divisor=None,
@@ -110,7 +113,7 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
-    step=[16, 22])
+    step=[16, 20])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -120,11 +123,12 @@ log_config = dict(
         # dict(type='TensorboardLoggerHook')
     ])
 # yapf:enable
+evaluation = dict(interval=1)
 # runtime settings
 total_epochs = 24
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/refinedet512_coco'
+work_dir = './work_dirs/refinedet512_voc'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]

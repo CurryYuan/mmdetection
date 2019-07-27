@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from ..registry import LOSSES
 
+import numpy as np
 
 def _expand_binary_labels(labels, label_weights, label_channels):
     bin_labels = labels.new_full((labels.size(0), label_channels), 0)
