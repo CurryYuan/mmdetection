@@ -14,10 +14,11 @@ from .mask_scoring_rcnn import MaskScoringRCNN
 from .refinedet import RefineDet
 from .my_detector import MyDetector
 from .my_rpn import MyRPN
+from .my_fa_rpn import MyFaRPN
 
 __all__ = [
     'BaseDetector', 'SingleStageDetector', 'TwoStageDetector', 'RPN',
     'FastRCNN', 'FasterRCNN', 'MaskRCNN', 'CascadeRCNN', 'HybridTaskCascade',
     'RetinaNet', 'FCOS', 'GridRCNN', 'MaskScoringRCNN', 'RefineDet', 'MyDetector',
-    'MyRPN'
+    'MyRPN', 'MyFaRPN'
 ]

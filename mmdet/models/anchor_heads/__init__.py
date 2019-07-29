@@ -8,8 +8,10 @@ from .ga_retina_head import GARetinaHead
 from .ssd_head import SSDHead
 from .refinedet_head import RefineDetHead
 from .ours_head import OursHead
+from .fa_ours_head import FAOursHead
 
 __all__ = [
     'AnchorHead', 'GuidedAnchorHead', 'FeatureAdaption', 'RPNHead',
-    'GARPNHead', 'RetinaHead', 'GARetinaHead', 'SSDHead', 'FCOSHead', 'RefineDetHead', 'OursHead'
+    'GARPNHead', 'RetinaHead', 'GARetinaHead', 'SSDHead', 'FCOSHead',
+    'RefineDetHead', 'OursHead', 'FAOursHead'
 ]

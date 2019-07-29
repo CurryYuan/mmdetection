@@ -11,6 +11,7 @@ from mmdet.core import (build_assigner, bbox2roi, bbox2result, build_sampler,
                         merge_aug_masks)
 import copy
 
+
 @DETECTORS.register_module
 class MyDetector(BaseDetector, RPNTestMixin):
 

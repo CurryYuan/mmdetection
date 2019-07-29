@@ -1,6 +1,6 @@
 # model settings
 model = dict(
-    type='MyRPN',
+    type='MyFaRPN',
     num_stages=2,
     pretrained='modelzoo://resnet50',
     backbone=dict(
@@ -17,7 +17,7 @@ model = dict(
         num_outs=5),
     rpn_head=[
         dict(
-            type='OursHead',
+            type='FAOursHead',
             in_channels=256,
             feat_channels=256,
             anchor_scales=[8],
@@ -29,7 +29,7 @@ model = dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
         dict(
-            type='OursHead',
+            type='FAOursHead',
             in_channels=256,
             feat_channels=256,
             anchor_scales=[8],
@@ -41,7 +41,7 @@ model = dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
         dict(
-            type='OursHead',
+            type='FAOursHead',
             in_channels=256,
             feat_channels=256,
             anchor_scales=[8],
@@ -145,13 +145,13 @@ data_root = 'data/coco/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 data = dict(
-    imgs_per_gpu=4,
+    imgs_per_gpu=8,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_train2017.json',
         img_prefix=data_root + 'train2017/',
-        img_scale=(600, 600),
+        img_scale=(300, 300),
         img_norm_cfg=img_norm_cfg,
         size_divisor=32,
         flip_ratio=0.5,
@@ -162,7 +162,7 @@ data = dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',
         img_prefix=data_root + 'val2017/',
-        img_scale=(600, 600),
+        img_scale=(300, 300),
         img_norm_cfg=img_norm_cfg,
         size_divisor=32,
         flip_ratio=0,
@@ -203,7 +203,7 @@ log_config = dict(
 total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/CascadeRPN'
+work_dir = './work_dirs/ga_ours_rpn'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
