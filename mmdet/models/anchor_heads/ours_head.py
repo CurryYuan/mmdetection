@@ -5,20 +5,64 @@ from mmcv.cnn import normal_init
 
 from mmdet.core import (AnchorGenerator, anchor_target, delta2bbox,
                         multi_apply, multiclass_nms, force_fp32)
+from mmdet.ops import DeformConv, MaskedConv2d
 from mmdet.ops import nms
 from .anchor_head import AnchorHead
 from ..registry import HEADS
+
+
+class FeatureAdaption(nn.Module):
+    """Feature Adaption Module.
+
+    Feature Adaption Module is implemented based on DCN v1.
+    It uses anchor shape prediction rather than feature map to
+    predict offsets of deformable conv layer.
+
+    Args:
+        in_channels (int): Number of channels in the input feature map.
+        out_channels (int): Number of channels in the output feature map.
+        kernel_size (int): Deformable conv kernel size.
+        deformable_groups (int): Deformable conv group size.
+    """
+
+    def __init__(self,
+                 num_anchors,
+                 in_channels,
+                 out_channels,
+                 kernel_size=3,
+                 deformable_groups=4):
+        super(FeatureAdaption, self).__init__()
+        offset_channels = kernel_size * kernel_size * 2
+        self.conv_offset = nn.Conv2d(
+            num_anchors * 4, deformable_groups * offset_channels, 1, bias=False)
+        self.conv_adaption = DeformConv(
+            in_channels,
+            out_channels,
+            kernel_size=kernel_size,
+            padding=(kernel_size - 1) // 2,
+            deformable_groups=deformable_groups)
+        self.relu = nn.ReLU(inplace=True)
+
+    def init_weights(self):
+        normal_init(self.conv_offset, std=0.1)
+        normal_init(self.conv_adaption, std=0.01)
+
+    def forward(self, x, shape):
+        offset = self.conv_offset(shape.detach())
+        x = self.relu(self.conv_adaption(x, offset))
+        return x
 
 
 @HEADS.register_module
 class OursHead(AnchorHead):
 
     def __init__(self, in_channels, **kwargs):
+        self.deformable_groups = 4
         super(OursHead, self).__init__(2, in_channels, **kwargs)
 
     def _init_layers(self):
         self.rpn_conv = nn.Conv2d(
-            self.in_channels, self.feat_channels, 3, padding=1)
+             self.in_channels, self.feat_channels, 3, padding=1)
         self.rpn_cls = nn.Conv2d(self.feat_channels,
                                  self.num_anchors * self.cls_out_channels, 1)
         self.rpn_reg = nn.Conv2d(self.feat_channels, self.num_anchors * 4, 1)
@@ -33,27 +77,8 @@ class OursHead(AnchorHead):
         x = F.relu(x, inplace=True)
         rpn_cls_score = self.rpn_cls(x)
         rpn_bbox_pred = self.rpn_reg(x)
-        return rpn_cls_score, rpn_bbox_pred
+        return x, rpn_cls_score, rpn_bbox_pred
 
-    # def loss(self,
-    #          cls_scores,
-    #          bbox_preds,
-    #          gt_bboxes,
-    #          img_metas,
-    #          cfg,
-    #          gt_bboxes_ignore=None):
-    #     losses = super(OursHead, self).loss(
-    #         cls_scores,
-    #         bbox_preds,
-    #         gt_bboxes,
-    #         None,
-    #         img_metas,
-    #         cfg,
-    #         gt_bboxes_ignore=gt_bboxes_ignore)
-    #     return dict(
-    #         loss_rpn_cls=losses['loss_cls'], loss_rpn_bbox=losses['loss_bbox'])
-
-    @force_fp32(apply_to=('cls_scores', 'bbox_preds'))
     def loss(self,
              cls_scores,
              bbox_preds,

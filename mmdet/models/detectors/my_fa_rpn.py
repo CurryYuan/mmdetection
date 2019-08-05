@@ -6,6 +6,7 @@ from .test_mixins import RPNTestMixin
 from .. import builder
 from ..registry import DETECTORS
 import copy
+import torch
 
 
 @DETECTORS.register_module
@@ -68,8 +69,9 @@ class MyFaRPN(BaseDetector, RPNTestMixin):
                 losses['s{}.{}'.format(i, name)] = value
             # losses.update(rpn_losses)
 
-            rpn_refined_inputs = rpn_outs + (img_meta, self.train_cfg.rpn[i], proposal_list)
-            proposal_list = self.rpn_head[i].get_refined_anchors(*rpn_refined_inputs)
+            with torch.no_grad():
+                rpn_refined_inputs = rpn_outs + (img_meta, self.train_cfg.rpn[i], proposal_list)
+                proposal_list = self.rpn_head[i].get_refined_anchors(*rpn_refined_inputs)
 
         return losses
 
@@ -79,7 +81,8 @@ class MyFaRPN(BaseDetector, RPNTestMixin):
         proposal_list = None
 
         for i in range(self.num_stages):
-            rpn_outs = self.rpn_head[i](x)
+            x, rpn_cls_score, rpn_bbox_pred = self.rpn_head[i](x)
+            rpn_outs = (rpn_cls_score, rpn_bbox_pred)
 
             if i == self.num_stages - 1:
                 proposal_cfg = self.test_cfg.get('rpn_proposal', self.test_cfg.rpn)

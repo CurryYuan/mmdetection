@@ -79,6 +79,8 @@ class FAOursHead(AnchorHead):
         normal_init(self.rpn_cls, std=0.01)
         normal_init(self.rpn_reg, std=0.01)
 
+        self.feature_adaption.init_weights()
+
     def forward_single(self, x):
         x = self.rpn_conv(x)
         x = F.relu(x, inplace=True)
