@@ -1,7 +1,7 @@
 # model settings
 model = dict(
     type='MyFaRPN',
-    num_stages=3,
+    num_stages=2,
     pretrained='modelzoo://resnet50',
     backbone=dict(
         type='ResNet',
@@ -61,9 +61,9 @@ train_cfg = dict(
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.7,
+                pos_iou_thr=0.5,
                 neg_iou_thr=0.3,
-                min_pos_iou=0.3,
+                min_pos_iou=0,
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
@@ -77,7 +77,7 @@ train_cfg = dict(
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.7,
+                pos_iou_thr=0.6,
                 neg_iou_thr=0.3,
                 min_pos_iou=0.3,
                 ignore_iof_thr=-1),
@@ -136,7 +136,7 @@ test_cfg = dict(
         nms_pre=2000,
         nms_post=2000,
         max_num=2000,
-        nms_thr=0.7,
+        nms_thr=1,
         min_bbox_size=0),
     rcnn=dict(
         score_thr=0.05, nms=dict(type='nms', iou_thr=0.5), max_per_img=100),
@@ -147,7 +147,7 @@ data_root = 'data/coco/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 data = dict(
-    imgs_per_gpu=8,
+    imgs_per_gpu=4,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
@@ -183,7 +183,7 @@ data = dict(
         with_label=False,
         test_mode=True))
 # optimizer
-optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.0002, momentum=0.9, weight_decay=0.0001)
 # runner configs
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 lr_config = dict(
@@ -206,7 +206,7 @@ total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
-load_from = './weights/rpn_r50_fpn_1x.pth'
+load_from = './weights/epoch_12.pth'
 resume_from = None
 workflow = [('train', 1)]
 

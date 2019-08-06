@@ -4,7 +4,10 @@ from terminaltables import AsciiTable
 from .bbox_overlaps import bbox_overlaps
 
 
-def _recalls(all_ious, proposal_nums, thrs):
+def _recalls(proposals, all_ious, proposal_nums, thrs):
+
+    x = []
+    y = []
 
     img_num = all_ious.shape[0]
     total_gt_num = sum([ious.shape[0] for ious in all_ious])
@@ -26,8 +29,18 @@ def _recalls(all_ious, proposal_nums, thrs):
                 box_idx = gt_max_overlaps[gt_idx]
                 ious[gt_idx, :] = -1
                 ious[:, box_idx] = -1
+
+                if k == 2:
+                    x.append(gt_ious[j])
+                    y.append(proposals[gt_idx][box_idx, 4])
+
             tmp_ious = np.hstack((tmp_ious, gt_ious))
         _ious[k, :] = tmp_ious
+
+    x = np.array(x)
+    y = np.array(y)
+    np.save('x.npy', x)
+    np.save('y.npy', y)
 
     _ious = np.fliplr(np.sort(_ious, axis=1))
     recalls = np.zeros((proposal_nums.size, thrs.size))
@@ -94,9 +107,11 @@ def eval_recalls(gts,
             ious = np.zeros((0, img_proposal.shape[0]), dtype=np.float32)
         else:
             ious = bbox_overlaps(gts[i], img_proposal[:prop_num, :4])
+
         all_ious.append(ious)
     all_ious = np.array(all_ious)
-    recalls = _recalls(all_ious, proposal_nums, iou_thrs)
+
+    recalls = _recalls(proposals, all_ious, proposal_nums, iou_thrs)
     if print_summary:
         print_recall_summary(recalls, proposal_nums, iou_thrs)
     return recalls

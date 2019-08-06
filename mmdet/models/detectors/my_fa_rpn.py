@@ -56,6 +56,7 @@ class MyFaRPN(BaseDetector, RPNTestMixin):
         proposal_list = None
 
         for i in range(self.num_stages):
+            print("stage: ", i)
             lw = self.train_cfg.stage_loss_weights[i]
             x, rpn_cls_score, rpn_bbox_pred = self.rpn_head[i](x)
             rpn_outs = (rpn_cls_score, rpn_bbox_pred)
@@ -124,4 +125,5 @@ class MyFaRPN(BaseDetector, RPNTestMixin):
         for img, img_meta in zip(imgs, img_metas):
             h, w, _ = img_meta['img_shape']
             img_show = img[:h, :w, :]
-            mmcv.imshow_bboxes(img_show, result, top_k=top_k)
+            mmcv.imshow_det_bboxes(img_show, result, result[:, 4], score_thr=0.9)
+            # mmcv.imshow_bboxes(img_show, result, top_k=top_k)

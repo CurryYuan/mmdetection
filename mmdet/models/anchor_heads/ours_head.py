@@ -6,7 +6,7 @@ from mmcv.cnn import normal_init
 from mmdet.core import (AnchorGenerator, anchor_target, delta2bbox,
                         multi_apply, multiclass_nms, force_fp32)
 from mmdet.ops import DeformConv, MaskedConv2d
-from mmdet.ops import nms
+from mmdet.ops import nms, soft_nms
 from .anchor_head import AnchorHead
 from ..registry import HEADS
 
@@ -165,12 +165,12 @@ class OursHead(AnchorHead):
                 proposals = proposals[valid_inds, :]
                 scores = scores[valid_inds]
             proposals = torch.cat([proposals, scores.unsqueeze(-1)], dim=-1)
-            proposals, _ = nms(proposals, cfg.nms_thr)
+            proposals, _ = soft_nms(proposals, cfg.nms_thr)
             proposals = proposals[:cfg.nms_post, :]
             mlvl_proposals.append(proposals)
         proposals = torch.cat(mlvl_proposals, 0)
         if cfg.nms_across_levels:
-            proposals, _ = nms(proposals, cfg.nms_thr)
+            proposals, _ = soft_nms(proposals, cfg.nms_thr)
             proposals = proposals[:cfg.max_num, :]
         else:
             scores = proposals[:, 4]
