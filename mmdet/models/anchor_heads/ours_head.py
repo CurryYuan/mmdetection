@@ -145,7 +145,6 @@ class OursHead(AnchorHead):
     def get_bboxes_single(self,
                           cls_scores,
                           bbox_preds,
-                          giou_preds,
                           mlvl_anchors,
                           img_shape,
                           scale_factor,
@@ -266,9 +265,12 @@ class OursHead(AnchorHead):
                 bbox_pred_list = [
                     bbox_preds[i][img_id].detach() for i in range(num_levels)
                 ]
+                giou_pred_list = [
+                    giou_preds[i][img_id].detach() for i in range(num_levels)
+                ]
                 img_shape = img_metas[img_id]['img_shape']
                 scale_factor = img_metas[img_id]['scale_factor']
-                proposals = self.get_bboxes_single(cls_score_list, bbox_pred_list,
+                proposals = self.get_bboxes_single(giou_pred_list, bbox_pred_list,
                                                             mlvl_anchors, img_shape,
                                                             scale_factor, cfg, rescale)
                 result_list.append(proposals)
