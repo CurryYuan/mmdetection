@@ -1,7 +1,7 @@
 # model settings
 model = dict(
     type='MyFaRPN',
-    num_stages=1,
+    num_stages=3,
     pretrained='modelzoo://resnet50',
     backbone=dict(
         type='ResNet',
@@ -9,7 +9,9 @@ model = dict(
         num_stages=4,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
-        style='pytorch'),
+        norm_cfg=dict(type='BN', requires_grad=False),
+        norm_eval=True,
+        style='caffe'),
     neck=dict(
         type='FPN',
         in_channels=[256, 512, 1024, 2048],
@@ -40,8 +42,20 @@ model = dict(
             loss_cls=dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
+        # dict(
+        #     type='OursHead',
+        #     in_channels=256,
+        #     feat_channels=256,
+        #     anchor_scales=[8],
+        #     anchor_ratios=[0.5, 1.0, 2.0],
+        #     anchor_strides=[4, 8, 16, 32, 64],
+        #     target_means=[.0, .0, .0, .0],
+        #     target_stds=[1.0, 1.0, 1.0, 1.0],
+        #     loss_cls=dict(
+        #         type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
+        #     loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
         dict(
-            type='FAOursHead',
+            type='OursHead',
             in_channels=256,
             feat_channels=256,
             anchor_scales=[8],
@@ -92,8 +106,8 @@ train_cfg = dict(
             assigner=dict(
                 type='MaxIoUAssigner',
                 pos_iou_thr=0.7,
-                neg_iou_thr=0.7,
-                min_pos_iou=0.7,
+                neg_iou_thr=0.3,
+                min_pos_iou=0.3,
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
@@ -141,11 +155,11 @@ test_cfg = dict(
     keep_all_stages=False)
 # dataset settings
 dataset_type = 'CocoDataset'
-data_root = '/home/season/data/coco/'
+data_root = 'data/coco/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 data = dict(
-    imgs_per_gpu=4,
+    imgs_per_gpu=8,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
@@ -203,8 +217,8 @@ log_config = dict(
 total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/ga_ours_rpn'
-load_from = None
+work_dir = './work_dirs/CascadeRPN'
+load_from = './weights/rpn_r50_fpn_1x.pth'
 resume_from = None
 workflow = [('train', 1)]
 
