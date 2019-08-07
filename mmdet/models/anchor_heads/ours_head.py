@@ -9,48 +9,7 @@ from mmdet.ops import DeformConv, MaskedConv2d
 from mmdet.ops import nms, soft_nms
 from .anchor_head import AnchorHead
 from ..registry import HEADS
-
-
-class FeatureAdaption(nn.Module):
-    """Feature Adaption Module.
-
-    Feature Adaption Module is implemented based on DCN v1.
-    It uses anchor shape prediction rather than feature map to
-    predict offsets of deformable conv layer.
-
-    Args:
-        in_channels (int): Number of channels in the input feature map.
-        out_channels (int): Number of channels in the output feature map.
-        kernel_size (int): Deformable conv kernel size.
-        deformable_groups (int): Deformable conv group size.
-    """
-
-    def __init__(self,
-                 num_anchors,
-                 in_channels,
-                 out_channels,
-                 kernel_size=3,
-                 deformable_groups=4):
-        super(FeatureAdaption, self).__init__()
-        offset_channels = kernel_size * kernel_size * 2
-        self.conv_offset = nn.Conv2d(
-            num_anchors * 4, deformable_groups * offset_channels, 1, bias=False)
-        self.conv_adaption = DeformConv(
-            in_channels,
-            out_channels,
-            kernel_size=kernel_size,
-            padding=(kernel_size - 1) // 2,
-            deformable_groups=deformable_groups)
-        self.relu = nn.ReLU(inplace=True)
-
-    def init_weights(self):
-        normal_init(self.conv_offset, std=0.1)
-        normal_init(self.conv_adaption, std=0.01)
-
-    def forward(self, x, shape):
-        offset = self.conv_offset(shape.detach())
-        x = self.relu(self.conv_adaption(x, offset))
-        return x
+from ..builder import build_loss
 
 
 @HEADS.register_module
@@ -59,6 +18,8 @@ class OursHead(AnchorHead):
     def __init__(self, in_channels, **kwargs):
         self.deformable_groups = 4
         super(OursHead, self).__init__(2, in_channels, **kwargs)
+        self.loss_giou = build_loss(dict(
+            type='SmoothL1Loss', loss_weight=1.0))
 
     def _init_layers(self):
         self.rpn_conv = nn.Conv2d(
@@ -67,23 +28,28 @@ class OursHead(AnchorHead):
                                  self.num_anchors * self.cls_out_channels, 1)
         self.rpn_reg = nn.Conv2d(self.feat_channels, self.num_anchors * 4, 1)
 
+        self.rpn_giou = nn.Conv2d(self.feat_channels, self.num_anchors, 1)
+
     def init_weights(self):
         normal_init(self.rpn_conv, std=0.01)
         normal_init(self.rpn_cls, std=0.01)
         normal_init(self.rpn_reg, std=0.01)
+
+        normal_init(self.rpn_giou, std=0.01)
 
     def forward_single(self, x):
         x = self.rpn_conv(x)
         x = F.relu(x, inplace=True)
         rpn_cls_score = self.rpn_cls(x)
         rpn_bbox_pred = self.rpn_reg(x)
-        return x, rpn_cls_score, rpn_bbox_pred
+        rpn_giou_pred = self.rpn_giou(x)
+        return x, rpn_cls_score, rpn_bbox_pred, rpn_giou_pred
 
     def loss(self,
              cls_scores,
              bbox_preds,
+             giou_preds,
              gt_bboxes,
-             # gt_labels,
              img_metas,
              cfg,
              proposals=None,
@@ -116,21 +82,70 @@ class OursHead(AnchorHead):
          num_total_pos, num_total_neg) = cls_reg_targets
         num_total_samples = (
             num_total_pos + num_total_neg if self.sampling else num_total_pos)
-        losses_cls, losses_bbox = multi_apply(
+        losses_cls, losses_bbox, losses_giou = multi_apply(
             self.loss_single,
             cls_scores,
             bbox_preds,
+            giou_preds,
             labels_list,
             label_weights_list,
             bbox_targets_list,
             bbox_weights_list,
             num_total_samples=num_total_samples,
             cfg=cfg)
-        return dict(loss_rpn_cls=losses_cls, loss_rpn_bbox=losses_bbox)
+        return dict(loss_rpn_cls=losses_cls, loss_rpn_bbox=losses_bbox, loss_rpn_giou=losses_giou)
+
+    def get_giou(self, pred, target):
+        assert pred.size() == target.size() and target.numel() > 0
+
+        area1 = (pred[:, 2] - pred[:, 0] + 1) * (pred[:, 3] - pred[:, 1] + 1)
+        area2 = (target[:, 2] - target[:, 0] + 1) * (target[:, 3] - target[:, 1] + 1)
+
+        overlap_lt = torch.max(pred[:, :2], target[:, :2])  # [n, 2]
+        overlap_rb = torch.min(pred[:, 2:], target[:, 2:])
+        overlap_wh = (overlap_rb - overlap_lt + 1).clamp(min=0)
+        overlap = overlap_wh[:, 0] * overlap_wh[:, 1]
+
+        unions = area1 + area2 - overlap
+        ious = overlap / unions
+
+        convex_lt = torch.min(pred[:, :2], target[:, :2])
+        convex_rb = torch.max(pred[:, 2:], target[:, 2:])
+        convex_wh = (convex_rb - convex_lt + 1).clamp(min=0)
+        convex = convex_wh[:, 0] * convex_wh[:, 1]
+
+        gious = ious - (convex - unions) / convex.clamp(min=1e-5)  # [n]
+
+        return gious  # (1 - gious).sum()
+
+    def loss_single(self, cls_score, bbox_pred, giou_pred, labels, label_weights,
+                    bbox_targets, bbox_weights, num_total_samples, cfg):
+        # classification loss
+        labels = labels.reshape(-1)
+        label_weights = label_weights.reshape(-1)
+        cls_score = cls_score.permute(0, 2, 3,
+                                      1).reshape(-1, self.cls_out_channels)
+        loss_cls = self.loss_cls(
+            cls_score, labels, label_weights, avg_factor=num_total_samples)
+        # regression loss
+        bbox_targets = bbox_targets.reshape(-1, 4)
+        bbox_weights = bbox_weights.reshape(-1, 4)
+        bbox_pred = bbox_pred.permute(0, 2, 3, 1).reshape(-1, 4)
+        loss_bbox = self.loss_bbox(
+            bbox_pred,
+            bbox_targets,
+            bbox_weights,
+            avg_factor=num_total_samples)
+        # giou loss
+        giou_targets = self.get_giou(bbox_pred, bbox_targets)
+        giou_preds = giou_pred.permute(0, 2, 3, 1).reshape(-1)
+        loss_giou = self.loss_giou(giou_preds, giou_targets)
+        return loss_cls, loss_bbox, loss_giou
 
     def get_bboxes_single(self,
                           cls_scores,
                           bbox_preds,
+                          giou_preds,
                           mlvl_anchors,
                           img_shape,
                           scale_factor,
@@ -165,12 +180,12 @@ class OursHead(AnchorHead):
                 proposals = proposals[valid_inds, :]
                 scores = scores[valid_inds]
             proposals = torch.cat([proposals, scores.unsqueeze(-1)], dim=-1)
-            proposals, _ = soft_nms(proposals, cfg.nms_thr)
+            proposals, _ = nms(proposals, cfg.nms_thr)
             proposals = proposals[:cfg.nms_post, :]
             mlvl_proposals.append(proposals)
         proposals = torch.cat(mlvl_proposals, 0)
         if cfg.nms_across_levels:
-            proposals, _ = soft_nms(proposals, cfg.nms_thr)
+            proposals, _ = nms(proposals, cfg.nms_thr)
             proposals = proposals[:cfg.max_num, :]
         else:
             scores = proposals[:, 4]
@@ -230,8 +245,8 @@ class OursHead(AnchorHead):
         #     proposals = proposals[topk_inds, :]
         return mlvl_proposals
 
-    @force_fp32(apply_to=('cls_scores', 'bbox_preds'))
-    def get_bboxes(self, cls_scores, bbox_preds, img_metas, cfg,
+    @force_fp32(apply_to=('cls_scores', 'bbox_preds', 'giou_preds'))
+    def get_bboxes(self, cls_scores, bbox_preds, giou_preds, img_metas, cfg,
                    refined_anchors, rescale=False):
         assert len(cls_scores) == len(bbox_preds)
         num_levels = len(cls_scores)

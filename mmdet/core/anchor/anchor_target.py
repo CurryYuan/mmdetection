@@ -155,9 +155,9 @@ def anchor_target_single(flat_anchors,
         bbox_targets = unmap(bbox_targets, num_total_anchors, inside_flags)
         bbox_weights = unmap(bbox_weights, num_total_anchors, inside_flags)
 
-    print('pos num: ', pos_inds.size())
-    print('pos iou: ', assign_result.max_overlaps[pos_inds])
-    print('neg num: ', neg_inds.size())
+    # print('pos num: ', pos_inds.size())
+    # print('pos iou: ', assign_result.max_overlaps[pos_inds])
+    # print('neg num: ', neg_inds.size())
 
     return (labels, label_weights, bbox_targets, bbox_weights, pos_inds,
             neg_inds)
