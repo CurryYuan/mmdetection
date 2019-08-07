@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from mmcv.cnn import normal_init
 
 from mmdet.core import (AnchorGenerator, anchor_target, delta2bbox,
-                        multi_apply, multiclass_nms, force_fp32)
+                        multi_apply, multiclass_nms, force_fp32, bbox_overlaps)
 from mmdet.ops import DeformConv, MaskedConv2d
 from mmdet.ops import nms, soft_nms
 from .anchor_head import AnchorHead
@@ -98,25 +98,27 @@ class OursHead(AnchorHead):
     def get_giou(self, pred, target):
         assert pred.size() == target.size() and target.numel() > 0
 
-        area1 = (pred[:, 2] - pred[:, 0] + 1) * (pred[:, 3] - pred[:, 1] + 1)
-        area2 = (target[:, 2] - target[:, 0] + 1) * (target[:, 3] - target[:, 1] + 1)
+        # area1 = (pred[:, 2] - pred[:, 0] + 1) * (pred[:, 3] - pred[:, 1] + 1)
+        # area2 = (target[:, 2] - target[:, 0] + 1) * (target[:, 3] - target[:, 1] + 1)
+        #
+        # overlap_lt = torch.max(pred[:, :2], target[:, :2])  # [n, 2]
+        # overlap_rb = torch.min(pred[:, 2:], target[:, 2:])
+        # overlap_wh = (overlap_rb - overlap_lt + 1).clamp(min=0)
+        # overlap = overlap_wh[:, 0] * overlap_wh[:, 1]
+        #
+        # unions = area1 + area2 - overlap
+        # ious = overlap / unions
+        #
+        # convex_lt = torch.min(pred[:, :2], target[:, :2])
+        # convex_rb = torch.max(pred[:, 2:], target[:, 2:])
+        # convex_wh = (convex_rb - convex_lt + 1).clamp(min=0)
+        # convex = convex_wh[:, 0] * convex_wh[:, 1]
+        #
+        # gious = ious - (convex - unions) / convex.clamp(min=1e-5)  # [n]
 
-        overlap_lt = torch.max(pred[:, :2], target[:, :2])  # [n, 2]
-        overlap_rb = torch.min(pred[:, 2:], target[:, 2:])
-        overlap_wh = (overlap_rb - overlap_lt + 1).clamp(min=0)
-        overlap = overlap_wh[:, 0] * overlap_wh[:, 1]
+        ious = bbox_overlaps(pred, target, is_aligned=True).clamp(min=1e-6)
 
-        unions = area1 + area2 - overlap
-        ious = overlap / unions
-
-        convex_lt = torch.min(pred[:, :2], target[:, :2])
-        convex_rb = torch.max(pred[:, 2:], target[:, 2:])
-        convex_wh = (convex_rb - convex_lt + 1).clamp(min=0)
-        convex = convex_wh[:, 0] * convex_wh[:, 1]
-
-        gious = ious - (convex - unions) / convex.clamp(min=1e-5)  # [n]
-
-        return gious  # (1 - gious).sum()
+        return ious  # (1 - gious).sum()
 
     def loss_single(self, cls_score, bbox_pred, giou_pred, labels, label_weights,
                     bbox_targets, bbox_weights, num_total_samples, cfg):
@@ -270,7 +272,7 @@ class OursHead(AnchorHead):
                 ]
                 img_shape = img_metas[img_id]['img_shape']
                 scale_factor = img_metas[img_id]['scale_factor']
-                proposals = self.get_bboxes_single(giou_pred_list, bbox_pred_list,
+                proposals = self.get_bboxes_single(cls_score_list, bbox_pred_list,
                                                             mlvl_anchors, img_shape,
                                                             scale_factor, cfg, rescale)
                 result_list.append(proposals)
