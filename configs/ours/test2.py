@@ -206,7 +206,7 @@ total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
-load_from = './weights/rpn_r50_fpn_1x_20181010-4a9c0712.pth'
+load_from = None
 resume_from = None
 workflow = [('train', 1)]
 

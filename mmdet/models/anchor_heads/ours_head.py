@@ -101,31 +101,34 @@ class OursHead(AnchorHead):
     def get_giou(self, pred, target, pos_inds, anchors, img_meta):
         assert pred.size() == target.size() and target.numel() > 0
 
-        # area1 = (pred[:, 2] - pred[:, 0] + 1) * (pred[:, 3] - pred[:, 1] + 1)
-        # area2 = (target[:, 2] - target[:, 0] + 1) * (target[:, 3] - target[:, 1] + 1)
-        #
-        # overlap_lt = torch.max(pred[:, :2], target[:, :2])  # [n, 2]
-        # overlap_rb = torch.min(pred[:, 2:], target[:, 2:])
-        # overlap_wh = (overlap_rb - overlap_lt + 1).clamp(min=0)
-        # overlap = overlap_wh[:, 0] * overlap_wh[:, 1]
-        #
-        # unions = area1 + area2 - overlap
-        # ious = overlap / unions
-        #
-        # convex_lt = torch.min(pred[:, :2], target[:, :2])
-        # convex_rb = torch.max(pred[:, 2:], target[:, 2:])
-        # convex_wh = (convex_rb - convex_lt + 1).clamp(min=0)
-        # convex = convex_wh[:, 0] * convex_wh[:, 1]
-        #
-        # gious = ious - (convex - unions) / convex.clamp(min=1e-5)  # [n]
-
-        pred_proposals = delta2bbox(anchors[pos_inds], pred[pos_inds], self.target_means,
+        pred = delta2bbox(anchors[pos_inds], pred[pos_inds], self.target_means,
                                     self.target_stds, img_meta['img_shape'])
-        target_proposals = delta2bbox(anchors[pos_inds], target[pos_inds], self.target_means,
+        target = delta2bbox(anchors[pos_inds], target[pos_inds], self.target_means,
                                       self.target_stds, img_meta['img_shape'])
-        ious = bbox_overlaps(pred_proposals, target_proposals, is_aligned=True).clamp(min=1e-6)
+        
+        # iou
+        # ious = bbox_overlaps(pred_proposals, target_proposals, is_aligned=True).clamp(min=1e-6)
 
-        return ious  # (1 - gious).sum()
+        # giou
+        area1 = (pred[:, 2] - pred[:, 0] + 1) * (pred[:, 3] - pred[:, 1] + 1)
+        area2 = (target[:, 2] - target[:, 0] + 1) * (target[:, 3] - target[:, 1] + 1)
+        
+        overlap_lt = torch.max(pred[:, :2], target[:, :2])  # [n, 2]
+        overlap_rb = torch.min(pred[:, 2:], target[:, 2:])
+        overlap_wh = (overlap_rb - overlap_lt + 1).clamp(min=0)
+        overlap = overlap_wh[:, 0] * overlap_wh[:, 1]
+        
+        unions = area1 + area2 - overlap
+        ious = overlap / unions
+        
+        convex_lt = torch.min(pred[:, :2], target[:, :2])
+        convex_rb = torch.max(pred[:, 2:], target[:, 2:])
+        convex_wh = (convex_rb - convex_lt + 1).clamp(min=0)
+        convex = convex_wh[:, 0] * convex_wh[:, 1]
+        
+        gious = ious - (convex - unions) / convex.clamp(min=1e-5)  # [n]
+
+        return gious  # (1 - gious).sum()
 
     def loss_single(self, cls_score, bbox_pred, giou_pred, labels, label_weights,
                     bbox_targets, bbox_weights, anchors, img_meta,
