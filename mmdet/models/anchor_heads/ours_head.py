@@ -78,11 +78,9 @@ class OursHead(AnchorHead):
             sampling=self.sampling)
         if cls_reg_targets is None:
             return None
-        (labels_list, label_weights_list, bbox_targets_list, bbox_weights_list,
-         pos_inds_list, neg_inds_list) = cls_reg_targets
+        (labels_list, label_weights_list, bbox_targets_list, bbox_weights_list, num_total_pos, num_total_neg,
+         mlvl_anchors) = cls_reg_targets
 
-        num_total_pos = sum([max(inds.numel(), 1) for inds in pos_inds_list])
-        num_total_neg = sum([max(inds.numel(), 1) for inds in neg_inds_list])
         num_total_samples = (
             num_total_pos + num_total_neg if self.sampling else num_total_pos)
         losses_cls, losses_bbox, losses_giou = multi_apply(
@@ -94,8 +92,7 @@ class OursHead(AnchorHead):
             label_weights_list,
             bbox_targets_list,
             bbox_weights_list,
-            pos_inds_list,
-            anchor_list,
+            mlvl_anchors,
             img_metas,
             num_total_samples=num_total_samples,
             cfg=cfg)
@@ -121,17 +118,17 @@ class OursHead(AnchorHead):
         # convex = convex_wh[:, 0] * convex_wh[:, 1]
         #
         # gious = ious - (convex - unions) / convex.clamp(min=1e-5)  # [n]
-        
+
         pred_proposals = delta2bbox(anchors[pos_inds], pred[pos_inds], self.target_means,
-                                   self.target_stds, img_meta['img_shape'])
-        target_proposals = delta2bbox(anchors[pos_inds], pred[pos_inds], self.target_means,
-                                   self.target_stds, img_meta['img_shape'])
+                                    self.target_stds, img_meta['img_shape'])
+        target_proposals = delta2bbox(anchors[pos_inds], target[pos_inds], self.target_means,
+                                      self.target_stds, img_meta['img_shape'])
         ious = bbox_overlaps(pred_proposals, target_proposals, is_aligned=True).clamp(min=1e-6)
 
         return ious  # (1 - gious).sum()
 
     def loss_single(self, cls_score, bbox_pred, giou_pred, labels, label_weights,
-                    bbox_targets, bbox_weights,pos_inds, anchors, img_meta
+                    bbox_targets, bbox_weights, anchors, img_meta,
                     num_total_samples, cfg):
         # classification loss
         labels = labels.reshape(-1)
@@ -152,12 +149,18 @@ class OursHead(AnchorHead):
             avg_factor=num_total_samples)
 
         # giou loss
-        giou_targets = self.get_giou(bbox_pred, bbox_targets, pos_inds,
-                                     anchors, img_meta).reshape(-1, 1)
-        giou_preds = giou_pred.permute(0, 2, 3, 1).reshape(-1, 1)
+        anchors = anchors.reshape(-1, 4)
         giou_weights = bbox_weights[:, 0].reshape(-1, 1)
-        loss_giou = self.loss_giou(giou_preds, giou_targets, giou_weights,
-                                   avg_factor=num_total_samples)
+        pos_inds = torch.nonzero(giou_weights)[:, 0]
+
+        if len(pos_inds) == 0:
+            loss_giou = torch.tensor(0, dtype=torch.float).cuda()
+        else:
+            giou_targets = self.get_giou(bbox_pred, bbox_targets, pos_inds,
+                                     anchors, img_meta).reshape(-1, 1)
+            giou_preds = giou_pred.permute(0, 2, 3, 1).reshape(-1, 1)
+            loss_giou = self.loss_giou(giou_preds[pos_inds], giou_targets,
+                                       avg_factor=len(pos_inds))
         return loss_cls, loss_bbox, loss_giou
 
     def get_bboxes_single(self,
