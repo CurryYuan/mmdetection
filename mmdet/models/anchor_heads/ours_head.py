@@ -139,9 +139,10 @@ class OursHead(AnchorHead):
             bbox_weights,
             avg_factor=num_total_samples)
         # giou loss
-        giou_targets = self.get_giou(bbox_pred, bbox_targets)
-        giou_preds = giou_pred.permute(0, 2, 3, 1).reshape(-1)
-        loss_giou = self.loss_giou(giou_preds, giou_targets)
+        giou_targets = self.get_giou(bbox_pred, bbox_targets).reshape(-1, 1)
+        giou_preds = giou_pred.permute(0, 2, 3, 1).reshape(-1, 1)
+        giou_weights = bbox_weights[:, 0].reshape(-1, 1)
+        loss_giou = self.loss_giou(giou_preds, giou_targets, giou_weights, avg_factor=num_total_samples)
         return loss_cls, loss_bbox, loss_giou
 
     def get_bboxes_single(self,
@@ -272,7 +273,7 @@ class OursHead(AnchorHead):
                 ]
                 img_shape = img_metas[img_id]['img_shape']
                 scale_factor = img_metas[img_id]['scale_factor']
-                proposals = self.get_bboxes_single(cls_score_list, bbox_pred_list,
+                proposals = self.get_bboxes_single(giou_pred_list, bbox_pred_list,
                                                             mlvl_anchors, img_shape,
                                                             scale_factor, cfg, rescale)
                 result_list.append(proposals)
