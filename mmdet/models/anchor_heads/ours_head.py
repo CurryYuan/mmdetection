@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from mmcv.cnn import normal_init
 
-from mmdet.core import (AnchorGenerator, anchor_target, delta2bbox,
+from mmdet.core import (AnchorGenerator, giou_anchor_target, delta2bbox,
                         multi_apply, multiclass_nms, force_fp32, bbox_overlaps)
 from mmdet.ops import DeformConv, MaskedConv2d
 from mmdet.ops import nms, soft_nms
@@ -64,7 +64,7 @@ class OursHead(AnchorHead):
             anchor_list = proposals
 
         label_channels = self.cls_out_channels if self.use_sigmoid_cls else 1
-        cls_reg_targets = anchor_target(
+        cls_reg_targets = giou_anchor_target(
             anchor_list,
             valid_flag_list,
             gt_bboxes,
@@ -79,7 +79,10 @@ class OursHead(AnchorHead):
         if cls_reg_targets is None:
             return None
         (labels_list, label_weights_list, bbox_targets_list, bbox_weights_list,
-         num_total_pos, num_total_neg) = cls_reg_targets
+         pos_inds_list, neg_inds_list) = cls_reg_targets
+         
+        num_total_pos = sum([max(inds.numel(), 1) for inds in pos_inds_list])
+        num_total_neg = sum([max(inds.numel(), 1) for inds in neg_inds_list])
         num_total_samples = (
             num_total_pos + num_total_neg if self.sampling else num_total_pos)
         losses_cls, losses_bbox, losses_giou = multi_apply(
@@ -129,6 +132,7 @@ class OursHead(AnchorHead):
                                       1).reshape(-1, self.cls_out_channels)
         loss_cls = self.loss_cls(
             cls_score, labels, label_weights, avg_factor=num_total_samples)
+
         # regression loss
         bbox_targets = bbox_targets.reshape(-1, 4)
         bbox_weights = bbox_weights.reshape(-1, 4)
@@ -138,6 +142,7 @@ class OursHead(AnchorHead):
             bbox_targets,
             bbox_weights,
             avg_factor=num_total_samples)
+
         # giou loss
         giou_targets = self.get_giou(bbox_pred, bbox_targets).reshape(-1, 1)
         giou_preds = giou_pred.permute(0, 2, 3, 1).reshape(-1, 1)
