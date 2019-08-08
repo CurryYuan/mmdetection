@@ -80,7 +80,7 @@ class OursHead(AnchorHead):
             return None
         (labels_list, label_weights_list, bbox_targets_list, bbox_weights_list,
          pos_inds_list, neg_inds_list) = cls_reg_targets
-         
+
         num_total_pos = sum([max(inds.numel(), 1) for inds in pos_inds_list])
         num_total_neg = sum([max(inds.numel(), 1) for inds in neg_inds_list])
         num_total_samples = (
@@ -94,11 +94,14 @@ class OursHead(AnchorHead):
             label_weights_list,
             bbox_targets_list,
             bbox_weights_list,
+            pos_inds_list,
+            anchor_list,
+            img_metas,
             num_total_samples=num_total_samples,
             cfg=cfg)
         return dict(loss_rpn_cls=losses_cls, loss_rpn_bbox=losses_bbox, loss_rpn_giou=losses_giou)
 
-    def get_giou(self, pred, target):
+    def get_giou(self, pred, target, pos_inds, anchors, img_meta):
         assert pred.size() == target.size() and target.numel() > 0
 
         # area1 = (pred[:, 2] - pred[:, 0] + 1) * (pred[:, 3] - pred[:, 1] + 1)
@@ -118,13 +121,18 @@ class OursHead(AnchorHead):
         # convex = convex_wh[:, 0] * convex_wh[:, 1]
         #
         # gious = ious - (convex - unions) / convex.clamp(min=1e-5)  # [n]
-
-        ious = bbox_overlaps(pred, target, is_aligned=True).clamp(min=1e-6)
+        
+        pred_proposals = delta2bbox(anchors[pos_inds], pred[pos_inds], self.target_means,
+                                   self.target_stds, img_meta['img_shape'])
+        target_proposals = delta2bbox(anchors[pos_inds], pred[pos_inds], self.target_means,
+                                   self.target_stds, img_meta['img_shape'])
+        ious = bbox_overlaps(pred_proposals, target_proposals, is_aligned=True).clamp(min=1e-6)
 
         return ious  # (1 - gious).sum()
 
     def loss_single(self, cls_score, bbox_pred, giou_pred, labels, label_weights,
-                    bbox_targets, bbox_weights, num_total_samples, cfg):
+                    bbox_targets, bbox_weights,pos_inds, anchors, img_meta
+                    num_total_samples, cfg):
         # classification loss
         labels = labels.reshape(-1)
         label_weights = label_weights.reshape(-1)
@@ -144,10 +152,12 @@ class OursHead(AnchorHead):
             avg_factor=num_total_samples)
 
         # giou loss
-        giou_targets = self.get_giou(bbox_pred, bbox_targets).reshape(-1, 1)
+        giou_targets = self.get_giou(bbox_pred, bbox_targets, pos_inds,
+                                     anchors, img_meta).reshape(-1, 1)
         giou_preds = giou_pred.permute(0, 2, 3, 1).reshape(-1, 1)
         giou_weights = bbox_weights[:, 0].reshape(-1, 1)
-        loss_giou = self.loss_giou(giou_preds, giou_targets, giou_weights, avg_factor=num_total_samples)
+        loss_giou = self.loss_giou(giou_preds, giou_targets, giou_weights,
+                                   avg_factor=num_total_samples)
         return loss_cls, loss_bbox, loss_giou
 
     def get_bboxes_single(self,
@@ -211,17 +221,17 @@ class OursHead(AnchorHead):
                           rescale=False):
         mlvl_proposals = []
         for idx in range(len(cls_scores)):
-            rpn_cls_score = cls_scores[idx]
+            # rpn_cls_score = cls_scores[idx]
             rpn_bbox_pred = bbox_preds[idx]
-            assert rpn_cls_score.size()[-2:] == rpn_bbox_pred.size()[-2:]
+            # assert rpn_cls_score.size()[-2:] == rpn_bbox_pred.size()[-2:]
             anchors = mlvl_anchors[idx]
-            rpn_cls_score = rpn_cls_score.permute(1, 2, 0)
-            if self.use_sigmoid_cls:
-                rpn_cls_score = rpn_cls_score.reshape(-1)
-                scores = rpn_cls_score.sigmoid()
-            else:
-                rpn_cls_score = rpn_cls_score.reshape(-1, 2)
-                scores = rpn_cls_score.softmax(dim=1)[:, 1]
+            # rpn_cls_score = rpn_cls_score.permute(1, 2, 0)
+            # if self.use_sigmoid_cls:
+            #     rpn_cls_score = rpn_cls_score.reshape(-1)
+            #     scores = rpn_cls_score.sigmoid()
+            # else:
+            #     rpn_cls_score = rpn_cls_score.reshape(-1, 2)
+            #     scores = rpn_cls_score.softmax(dim=1)[:, 1]
             rpn_bbox_pred = rpn_bbox_pred.permute(1, 2, 0).reshape(-1, 4)
             # if cfg.nms_pre > 0 and scores.shape[0] > cfg.nms_pre:
             #     _, topk_inds = scores.topk(cfg.nms_pre)
