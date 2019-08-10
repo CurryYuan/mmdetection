@@ -1,7 +1,7 @@
 # model settings
 model = dict(
     type='MyFaRPN',
-    num_stages=3,
+    num_stages=2,
     pretrained='modelzoo://resnet50',
     backbone=dict(
         type='ResNet',
@@ -9,9 +9,7 @@ model = dict(
         num_stages=4,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
-        norm_cfg=dict(type='BN', requires_grad=False),
-        norm_eval=True,
-        style='caffe'),
+        style='pytorch'),
     neck=dict(
         type='FPN',
         in_channels=[256, 512, 1024, 2048],
@@ -30,20 +28,8 @@ model = dict(
             loss_cls=dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
-        dict(
-            type='FAOursHead',
-            in_channels=256,
-            feat_channels=256,
-            anchor_scales=[8],
-            anchor_ratios=[0.5, 1.0, 2.0],
-            anchor_strides=[4, 8, 16, 32, 64],
-            target_means=[.0, .0, .0, .0],
-            target_stds=[1.0, 1.0, 1.0, 1.0],
-            loss_cls=dict(
-                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
-            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
         # dict(
-        #     type='OursHead',
+        #     type='FAOursHead',
         #     in_channels=256,
         #     feat_channels=256,
         #     anchor_scales=[8],
@@ -195,7 +181,7 @@ data = dict(
         with_label=False,
         test_mode=True))
 # optimizer
-optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.08, momentum=0.9, weight_decay=0.0001)
 # runner configs
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 lr_config = dict(
@@ -218,7 +204,7 @@ total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
-load_from = './weights/rpn_r50_fpn_1x.pth'
+load_from = './weights/rpn_r50_fpn_1x_20181010-4a9c0712.pth'
 resume_from = None
 workflow = [('train', 1)]
 
