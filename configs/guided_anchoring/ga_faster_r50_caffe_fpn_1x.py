@@ -115,10 +115,10 @@ train_cfg = dict(
 test_cfg = dict(
     rpn=dict(
         nms_across_levels=False,
-        nms_pre=1000,
-        nms_post=1000,
-        max_num=300,
-        nms_thr=0.7,
+        nms_pre=20000,
+        nms_post=20000,
+        max_num=1000,
+        nms_thr=1,
         min_bbox_size=0),
     rcnn=dict(
         score_thr=1e-3, nms=dict(type='nms', iou_thr=0.5), max_per_img=100))

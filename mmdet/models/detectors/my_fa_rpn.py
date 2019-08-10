@@ -85,6 +85,9 @@ class MyFaRPN(BaseDetector, RPNTestMixin):
             x, rpn_cls_scores, rpn_bbox_preds, rpn_giou_preds = self.rpn_head[i](x)
             rpn_outs = (rpn_cls_scores, rpn_bbox_preds, rpn_giou_preds)
 
+            # x, rpn_cls_scores, rpn_bbox_preds = self.rpn_head[i](x)
+            # rpn_outs = (rpn_cls_scores, rpn_bbox_preds)
+
             if i == self.num_stages - 1:
                 proposal_cfg = self.test_cfg.get('rpn_proposal', self.test_cfg.rpn)
                 proposal_inputs = rpn_outs + (img_meta, proposal_cfg, proposal_list)

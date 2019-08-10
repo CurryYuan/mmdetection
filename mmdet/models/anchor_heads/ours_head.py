@@ -145,11 +145,11 @@ class OursHead(AnchorHead):
         bbox_targets = bbox_targets.reshape(-1, 4)
         bbox_weights = bbox_weights.reshape(-1, 4)
         bbox_pred = bbox_pred.permute(0, 2, 3, 1).reshape(-1, 4)
-        loss_bbox = self.loss_bbox(
-            bbox_pred,
-            bbox_targets,
-            bbox_weights,
-            avg_factor=num_total_samples)
+        # loss_bbox = self.loss_bbox(
+        #     bbox_pred,
+        #     bbox_targets,
+        #     bbox_weights,
+        #     avg_factor=num_total_samples)
 
         # giou loss
         anchors = anchors.reshape(-1, 4)
@@ -158,12 +158,19 @@ class OursHead(AnchorHead):
 
         if len(pos_inds) == 0:
             loss_giou = torch.tensor(0, dtype=torch.float).cuda()
+            loss_bbox = torch.tensor(0, dtype=torch.float).cuda()
         else:
+            giou_preds = giou_pred.permute(0, 2, 3, 1).reshape(-1, 1)[pos_inds]
             giou_targets = self.get_giou(bbox_pred, bbox_targets, pos_inds,
-                                     anchors, img_meta).reshape(-1, 1)
-            giou_preds = giou_pred.permute(0, 2, 3, 1).reshape(-1, 1)
-            loss_giou = self.loss_giou(giou_preds[pos_inds], giou_targets,
+                                         anchors, img_meta).reshape(-1, 1)
+            loss_giou = self.loss_giou(giou_preds, giou_targets,
                                        avg_factor=len(pos_inds))
+            loss_bbox = self.loss_bbox(
+                bbox_pred[pos_inds],
+                bbox_targets[pos_inds],
+                giou_weights[pos_inds],
+                avg_factor=num_total_samples)
+
         return loss_cls, loss_bbox, loss_giou
 
     def get_bboxes_single(self,
@@ -269,7 +276,9 @@ class OursHead(AnchorHead):
         return mlvl_proposals
 
     @force_fp32(apply_to=('cls_scores', 'bbox_preds', 'giou_preds'))
-    def get_bboxes(self, cls_scores, bbox_preds, giou_preds, img_metas, cfg,
+    def get_bboxes(self, cls_scores, bbox_preds,
+                   giou_preds,
+                   img_metas, cfg,
                    refined_anchors, rescale=False):
         assert len(cls_scores) == len(bbox_preds)
         num_levels = len(cls_scores)
