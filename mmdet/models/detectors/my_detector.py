@@ -112,9 +112,11 @@ class MyDetector(BaseDetector, RPNTestMixin):
         proposal_list = proposals
 
         if self.with_rpn:
+            y = copy.deepcopy(x)
             for i in range(self.num_stages):
                 lw = self.train_cfg.stage_loss_weights[i]
-                rpn_outs = self.rpn_head[i](x)
+                y, rpn_cls_score, rpn_bbox_pred = self.rpn_head[i](y)
+                rpn_outs = (rpn_cls_score, rpn_bbox_pred)
                 rpn_loss_inputs = rpn_outs + (gt_bboxes, img_meta,
                                               self.train_cfg.rpn[i], copy.deepcopy(proposal_list))
                 rpn_losses = self.rpn_head[i].loss(
@@ -126,13 +128,13 @@ class MyDetector(BaseDetector, RPNTestMixin):
                 # losses.update(rpn_losses)
 
                 if i == self.num_stages - 1:
-                    proposal_cfg = self.train_cfg.get('rpn_proposal',
-                                                      self.test_cfg.rpn)
+                    proposal_cfg = self.train_cfg.get('rpn_proposal', self.test_cfg.rpn)
                     proposal_inputs = rpn_outs + (img_meta, proposal_cfg, proposal_list)
                     proposal_list = self.rpn_head[i].get_bboxes(*proposal_inputs)
                 else:
-                    rpn_refined_inputs = rpn_outs + (img_meta, self.train_cfg.rpn[i], proposal_list)
-                    proposal_list = self.rpn_head[i].get_refined_anchors(*rpn_refined_inputs)
+                    with torch.no_grad():
+                        rpn_refined_inputs = rpn_outs + (img_meta, self.train_cfg.rpn[i], proposal_list)
+                        proposal_list = self.rpn_head[i].get_refined_anchors(*rpn_refined_inputs)
 
         # assign gts and sample proposals
         if self.with_bbox or self.with_mask:
@@ -211,9 +213,11 @@ class MyDetector(BaseDetector, RPNTestMixin):
     def simple_test(self, img, img_meta, proposals=None, rescale=False):
         x = self.extract_feat(img)
         proposal_list = proposals
+        y = copy.deepcopy(x)
 
         for i in range(self.num_stages):
-            rpn_outs = self.rpn_head[i](x)
+            y, rpn_cls_score, rpn_bbox_pred = self.rpn_head[i](y)
+            rpn_outs = (rpn_cls_score, rpn_bbox_pred)
 
             if i == self.num_stages - 1:
                 proposal_cfg = self.test_cfg.get('rpn_proposal', self.test_cfg.rpn)
