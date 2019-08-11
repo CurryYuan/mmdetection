@@ -28,18 +28,6 @@ model = dict(
             loss_cls=dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
-        # dict(
-        #     type='FAOursHead',
-        #     in_channels=256,
-        #     feat_channels=256,
-        #     anchor_scales=[8],
-        #     anchor_ratios=[0.5, 1.0, 2.0],
-        #     anchor_strides=[4, 8, 16, 32, 64],
-        #     target_means=[.0, .0, .0, .0],
-        #     target_stds=[1.0, 1.0, 1.0, 1.0],
-        #     loss_cls=dict(
-        #         type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
-        #     loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
         dict(
             type='OursHead',
             in_channels=256,
@@ -59,7 +47,7 @@ train_cfg = dict(
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.7,
+                pos_iou_thr=0.6,
                 neg_iou_thr=0.3,
                 min_pos_iou=0.3,
                 ignore_iof_thr=-1),
@@ -146,7 +134,7 @@ img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 data = dict(
     imgs_per_gpu=8,
-    workers_per_gpu=8,
+    workers_per_gpu=4,
     train=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_train2017.json',
