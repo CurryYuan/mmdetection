@@ -112,7 +112,7 @@ class MyDetector(BaseDetector, RPNTestMixin):
         proposal_list = proposals
 
         if self.with_rpn:
-            y = copy.deepcopy(x)
+            y = x
             for i in range(self.num_stages):
                 lw = self.train_cfg.stage_loss_weights[i]
                 y, rpn_cls_score, rpn_bbox_pred = self.rpn_head[i](y)
@@ -213,7 +213,7 @@ class MyDetector(BaseDetector, RPNTestMixin):
     def simple_test(self, img, img_meta, proposals=None, rescale=False):
         x = self.extract_feat(img)
         proposal_list = proposals
-        y = copy.deepcopy(x)
+        y = x
 
         for i in range(self.num_stages):
             y, rpn_cls_score, rpn_bbox_pred = self.rpn_head[i](y)
