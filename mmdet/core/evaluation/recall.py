@@ -6,8 +6,8 @@ from .bbox_overlaps import bbox_overlaps
 
 def _recalls(proposals, all_ious, proposal_nums, thrs):
 
-    # x = []
-    # y = []
+    x = []
+    y = []
 
     img_num = all_ious.shape[0]
     total_gt_num = sum([ious.shape[0] for ious in all_ious])
@@ -30,17 +30,17 @@ def _recalls(proposals, all_ious, proposal_nums, thrs):
                 ious[gt_idx, :] = -1
                 ious[:, box_idx] = -1
 
-                # if k == 2:
-                #     x.append(gt_ious[j])
-                #     y.append(proposals[gt_idx][box_idx, 4])
+                if k == 2:
+                    x.append(gt_ious[j])
+                    y.append(proposals[i][box_idx, 4])
 
             tmp_ious = np.hstack((tmp_ious, gt_ious))
         _ious[k, :] = tmp_ious
 
-    # x = np.array(x)
-    # y = np.array(y)
-    # np.save('work_dirs/x.npy', x)
-    # np.save('work_dirs/y.npy', y)
+    x = np.array(x)
+    y = np.array(y)
+    np.save('work_dirs/x.npy', x)
+    np.save('work_dirs/y.npy', y)
 
     _ious = np.fliplr(np.sort(_ious, axis=1))
     recalls = np.zeros((proposal_nums.size, thrs.size))

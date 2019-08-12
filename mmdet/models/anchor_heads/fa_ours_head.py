@@ -13,11 +13,9 @@ from ..registry import HEADS
 
 class FeatureAdaption(nn.Module):
     """Feature Adaption Module.
-
     Feature Adaption Module is implemented based on DCN v1.
     It uses anchor shape prediction rather than feature map to
     predict offsets of deformable conv layer.
-
     Args:
         in_channels (int): Number of channels in the input feature map.
         out_channels (int): Number of channels in the output feature map.
