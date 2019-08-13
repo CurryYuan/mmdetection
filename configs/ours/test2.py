@@ -1,7 +1,7 @@
 # model settings
 model = dict(
     type='MyFaRPN',
-    num_stages=3,
+    num_stages=2,
     pretrained='modelzoo://resnet50',
     backbone=dict(
         type='ResNet',
@@ -28,18 +28,18 @@ model = dict(
             loss_cls=dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
-        dict(
-            type='FAOursHead',
-            in_channels=256,
-            feat_channels=256,
-            anchor_scales=[8],
-            anchor_ratios=[0.5, 1.0, 2.0],
-            anchor_strides=[4, 8, 16, 32, 64],
-            target_means=[.0, .0, .0, .0],
-            target_stds=[1.0, 1.0, 1.0, 1.0],
-            loss_cls=dict(
-                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
-            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
+        # dict(
+        #     type='FAOursHead',
+        #     in_channels=256,
+        #     feat_channels=256,
+        #     anchor_scales=[8],
+        #     anchor_ratios=[0.5, 1.0, 2.0],
+        #     anchor_strides=[4, 8, 16, 32, 64],
+        #     target_means=[.0, .0, .0, .0],
+        #     target_stds=[1.0, 1.0, 1.0, 1.0],
+        #     loss_cls=dict(
+        #         type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
+        #     loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
         dict(
             type='OursHead',
             in_channels=256,
@@ -133,7 +133,7 @@ test_cfg = dict(
         nms_across_levels=False,
         nms_pre=2000,
         nms_post=2000,
-        max_num=2000,
+        max_num=100,
         nms_thr=0.7,
         min_bbox_size=0),
     rcnn=dict(
