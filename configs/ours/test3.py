@@ -26,8 +26,8 @@ model = dict(
             target_means=[.0, .0, .0, .0],
             target_stds=[1.0, 1.0, 1.0, 1.0],
             loss_cls=dict(
-                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
-            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
+                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.5),
+            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.5)),
         dict(
             type='OursHead',
             in_channels=256,
@@ -38,8 +38,8 @@ model = dict(
             target_means=[.0, .0, .0, .0],
             target_stds=[1.0, 1.0, 1.0, 1.0],
             loss_cls=dict(
-                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
-            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0))
+                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.5),
+            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.5))
     ],
     bbox_roi_extractor=dict(
         type='SingleRoIExtractor',
@@ -122,7 +122,7 @@ train_cfg = dict(
         assigner=dict(
             type='MaxIoUAssigner',
             pos_iou_thr=0.6,
-            neg_iou_thr=0.6,
+            neg_iou_thr=0.5,
             min_pos_iou=0.5,
             ignore_iof_thr=-1),
         sampler=dict(
