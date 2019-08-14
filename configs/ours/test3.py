@@ -122,7 +122,7 @@ train_cfg = dict(
         assigner=dict(
             type='MaxIoUAssigner',
             pos_iou_thr=0.6,
-            neg_iou_thr=0.5,
+            neg_iou_thr=0.6,
             min_pos_iou=0.5,
             ignore_iof_thr=-1),
         sampler=dict(
@@ -157,7 +157,7 @@ data = dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_train2017.json',
         img_prefix=data_root + 'train2017/',
-        img_scale=(1333, 800),
+        img_scale=(600, 600),
         img_norm_cfg=img_norm_cfg,
         size_divisor=32,
         flip_ratio=0.5,
@@ -168,7 +168,7 @@ data = dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',
         img_prefix=data_root + 'val2017/',
-        img_scale=(1333, 800),
+        img_scale=(600, 600),
         img_norm_cfg=img_norm_cfg,
         size_divisor=32,
         flip_ratio=0,
@@ -206,7 +206,7 @@ log_config = dict(
     ])
 # yapf:enable
 # runtime settings
-total_epochs = 12
+total_epochs = 15
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
