@@ -26,8 +26,8 @@ model = dict(
             target_means=[.0, .0, .0, .0],
             target_stds=[1.0, 1.0, 1.0, 1.0],
             loss_cls=dict(
-                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.5),
-            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.5)),
+                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
+            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
         dict(
             type='OursHead',
             in_channels=256,
@@ -38,8 +38,8 @@ model = dict(
             target_means=[.0, .0, .0, .0],
             target_stds=[1.0, 1.0, 1.0, 1.0],
             loss_cls=dict(
-                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.5),
-            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.5))
+                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
+            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0))
     ],
     bbox_roi_extractor=dict(
         type='SingleRoIExtractor',
@@ -82,8 +82,8 @@ train_cfg = dict(
             assigner=dict(
                 type='MaxIoUAssigner',
                 pos_iou_thr=0.7,
-                neg_iou_thr=0.3,
-                min_pos_iou=0.3,
+                neg_iou_thr=0.4,
+                min_pos_iou=0.4,
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
@@ -123,7 +123,7 @@ train_cfg = dict(
             type='MaxIoUAssigner',
             pos_iou_thr=0.6,
             neg_iou_thr=0.6,
-            min_pos_iou=0.5,
+            min_pos_iou=0.6,
             ignore_iof_thr=-1),
         sampler=dict(
             type='RandomSampler',
@@ -195,7 +195,7 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
-    step=[8, 11, 14])
+    step=[8, 11, 13])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -206,7 +206,7 @@ log_config = dict(
     ])
 # yapf:enable
 # runtime settings
-total_epochs = 15
+total_epochs = 14
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
