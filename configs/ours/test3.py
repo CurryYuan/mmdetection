@@ -117,7 +117,7 @@ train_cfg = dict(
             add_gt_as_proposals=True),
         pos_weight=-1,
         debug=False),
-    stage_loss_weights=[0.5, 1, 1])
+    stage_loss_weights=[1, 1, 1])
 test_cfg = dict(
     rpn=dict(
         nms_across_levels=False,
@@ -179,7 +179,7 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
-    step=[9, 12])
+    step=[8, 11])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -194,7 +194,7 @@ total_epochs = 13
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
-load_from = None
+load_from = './weights/faster_rcnn_r50_fpn_1x_20181010-3d1b3351.pth'
 resume_from = None
 workflow = [('train', 1)]
 
