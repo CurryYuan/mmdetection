@@ -126,7 +126,7 @@ class FAOursHead(AnchorHead):
             label_weights_list,
             bbox_targets_list,
             bbox_weights_list,
-            num_total_samples=num_total_samples,
+            num_total_samples=num_total_pos,
             cfg=cfg)
         return dict(loss_rpn_bbox=losses_bbox)
 
