@@ -115,8 +115,8 @@ class MyDetector(BaseDetector, RPNTestMixin):
             y = x
             for i in range(self.num_stages):
                 lw = self.train_cfg.stage_loss_weights[i]
-                y, rpn_cls_score, rpn_bbox_pred = self.rpn_head[i](y)
-                rpn_outs = (rpn_cls_score, rpn_bbox_pred)
+                y, *rpn_outs = self.rpn_head[i](y)
+                rpn_outs = tuple(rpn_outs)
                 rpn_loss_inputs = rpn_outs + (gt_bboxes, img_meta,
                                               self.train_cfg.rpn[i], copy.deepcopy(proposal_list))
                 rpn_losses = self.rpn_head[i].loss(
@@ -216,8 +216,8 @@ class MyDetector(BaseDetector, RPNTestMixin):
         y = x
 
         for i in range(self.num_stages):
-            y, rpn_cls_score, rpn_bbox_pred = self.rpn_head[i](y)
-            rpn_outs = (rpn_cls_score, rpn_bbox_pred)
+            y, *rpn_outs = self.rpn_head[i](y)
+            rpn_outs = tuple(rpn_outs)
 
             if i == self.num_stages - 1:
                 proposal_cfg = self.test_cfg.get('rpn_proposal', self.test_cfg.rpn)

@@ -57,8 +57,8 @@ class MyFaRPN(BaseDetector, RPNTestMixin):
 
         for i in range(self.num_stages):
             lw = self.train_cfg.stage_loss_weights[i]
-            x, rpn_cls_score, rpn_bbox_pred = self.rpn_head[i](x)
-            rpn_outs = (rpn_cls_score, rpn_bbox_pred)
+            x, *rpn_outs = self.rpn_head[i](x)
+            rpn_outs = tuple(rpn_outs)
             rpn_loss_inputs = rpn_outs + (gt_bboxes, img_meta,
                                           self.train_cfg.rpn[i], copy.deepcopy(proposal_list))
             rpn_losses = self.rpn_head[i].loss(
@@ -67,7 +67,6 @@ class MyFaRPN(BaseDetector, RPNTestMixin):
                 for j in range(len(value)):
                     value[j] = value[j] * lw
                 losses['s{}.{}'.format(i, name)] = value
-            # losses.update(rpn_losses)
 
             with torch.no_grad():
                 rpn_refined_inputs = rpn_outs + (img_meta, self.train_cfg.rpn[i], proposal_list)
@@ -81,8 +80,8 @@ class MyFaRPN(BaseDetector, RPNTestMixin):
         proposal_list = None
 
         for i in range(self.num_stages):
-            x, rpn_cls_score, rpn_bbox_pred = self.rpn_head[i](x)
-            rpn_outs = (rpn_cls_score, rpn_bbox_pred)
+            x, *rpn_outs = self.rpn_head[i](x)
+            rpn_outs = tuple(rpn_outs)
 
             if i == self.num_stages - 1:
                 proposal_cfg = self.test_cfg.get('rpn_proposal', self.test_cfg.rpn)
