@@ -26,7 +26,7 @@ model = dict(
             target_means=[.0, .0, .0, .0],
             target_stds=[1.0, 1.0, 1.0, 1.0],
             loss_cls=dict(
-                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
+                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=0.0),
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
         dict(
             type='OursHead',
@@ -47,7 +47,7 @@ train_cfg = dict(
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.5,
+                pos_iou_thr=0.7,
                 neg_iou_thr=0.3,
                 min_pos_iou=0.3,
                 ignore_iof_thr=-1),
@@ -63,9 +63,9 @@ train_cfg = dict(
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.7,
-                neg_iou_thr=0.3,
-                min_pos_iou=0.3,
+                pos_iou_thr=0.5,
+                neg_iou_thr=0.5,
+                min_pos_iou=0.5,
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
@@ -115,7 +115,7 @@ train_cfg = dict(
             add_gt_as_proposals=True),
         pos_weight=-1,
         debug=False),
-    stage_loss_weights=[0.5, 1, 0.25])
+    stage_loss_weights=[1, 1, 1])
 test_cfg = dict(
     rpn=dict(
         nms_across_levels=False,
