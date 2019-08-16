@@ -17,7 +17,7 @@ model = dict(
         num_outs=5),
     rpn_head=[
         dict(
-            type='OursHead',
+            type='FAOursHead',
             in_channels=256,
             feat_channels=256,
             anchor_scales=[8],
@@ -65,9 +65,9 @@ train_cfg = dict(
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.6,
-                neg_iou_thr=0.3,
-                min_pos_iou=0.3,
+                pos_iou_thr=0.5,
+                neg_iou_thr=0.5,
+                min_pos_iou=0.5,
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
@@ -128,7 +128,6 @@ test_cfg = dict(
         min_bbox_size=0),
     rcnn=dict(
         score_thr=0.05, nms=dict(type='nms', iou_thr=0.5), max_per_img=100),
-        # score_thr=0.05, nms=dict(type='soft_nms', iou_thr=0.5, min_score=0.05), max_per_img=100),
     keep_all_stages=False)
 # dataset settings
 dataset_type = 'CocoDataset'
@@ -180,7 +179,7 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
-    step=[8, 11])
+    step=[9, 12])
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
@@ -191,7 +190,7 @@ log_config = dict(
     ])
 # yapf:enable
 # runtime settings
-total_epochs = 12
+total_epochs = 13
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
