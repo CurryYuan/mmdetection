@@ -17,7 +17,7 @@ model = dict(
         num_outs=5),
     rpn_head=[
         dict(
-            type='FAOursHead',
+            type='OursHead',
             in_channels=256,
             feat_channels=256,
             anchor_scales=[8],
@@ -195,7 +195,7 @@ total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
-load_from = None
+load_from = './weights/faster_rcnn_r50_fpn_1x_20181010-3d1b3351.pth'
 resume_from = None
 workflow = [('train', 1)]
 
