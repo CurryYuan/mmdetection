@@ -126,12 +126,12 @@ class FAOursHead(AnchorHead):
             label_weights_list,
             bbox_targets_list,
             bbox_weights_list,
-            num_total_samples=num_total_samples,
+            num_total_pos=num_total_pos,
             cfg=cfg)
         return dict(loss_rpn_bbox=losses_bbox)
 
     def loss_single(self, bbox_pred, labels, label_weights,
-                    bbox_targets, bbox_weights, num_total_samples, cfg):
+                    bbox_targets, bbox_weights, num_total_pos, cfg):
         # regression loss
         bbox_targets = bbox_targets.reshape(-1, 4)
         bbox_weights = bbox_weights.reshape(-1, 4)
@@ -140,7 +140,7 @@ class FAOursHead(AnchorHead):
             bbox_pred,
             bbox_targets,
             bbox_weights,
-            avg_factor=num_total_samples)
+            avg_factor=num_total_pos)
         return loss_bbox, None
 
     def get_refined_anchors_single(self, bbox_preds, mlvl_anchors, img_shape):
