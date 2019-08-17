@@ -1,6 +1,6 @@
 # model settings
 model = dict(
-    type='MyFaRPN',
+    type='MyDetector',
     num_stages=2,
     pretrained='modelzoo://resnet50',
     backbone=dict(
@@ -17,7 +17,7 @@ model = dict(
         num_outs=5),
     rpn_head=[
         dict(
-            type='FAOursHead',
+            type='OursHead',
             in_channels=256,
             feat_channels=256,
             anchor_scales=[8],
@@ -40,7 +40,25 @@ model = dict(
             loss_cls=dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0))
-    ])
+    ],
+    bbox_roi_extractor=dict(
+        type='SingleRoIExtractor',
+        roi_layer=dict(type='RoIAlign', out_size=7, sample_num=2),
+        out_channels=256,
+        featmap_strides=[4, 8, 16, 32]),
+    bbox_head=dict(
+        type='SharedFCBBoxHead',
+        num_fcs=2,
+        in_channels=256,
+        fc_out_channels=1024,
+        roi_feat_size=7,
+        num_classes=81,
+        target_means=[0., 0., 0., 0.],
+        target_stds=[0.1, 0.1, 0.2, 0.2],
+        reg_class_agnostic=False,
+        loss_cls=dict(
+            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
+        loss_bbox=dict(type='SmoothL1Loss', beta=1.0, loss_weight=1.0)))
 # model training and testing settings
 train_cfg = dict(
     rpn=[
@@ -66,22 +84,6 @@ train_cfg = dict(
                 pos_iou_thr=0.5,
                 neg_iou_thr=0.5,
                 min_pos_iou=0.5,
-                ignore_iof_thr=-1),
-            sampler=dict(
-                type='RandomSampler',
-                num=256,
-                pos_fraction=0.5,
-                neg_pos_ub=-1,
-                add_gt_as_proposals=False),
-            allowed_border=0,
-            pos_weight=-1,
-            debug=False),
-        dict(
-            assigner=dict(
-                type='MaxIoUAssigner',
-                pos_iou_thr=0.7,
-                neg_iou_thr=0.3,
-                min_pos_iou=0.3,
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
@@ -144,8 +146,8 @@ data = dict(
         size_divisor=32,
         flip_ratio=0.5,
         with_mask=False,
-        with_crowd=False,
-        with_label=False),
+        with_crowd=True,
+        with_label=True),
     val=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',
@@ -155,8 +157,8 @@ data = dict(
         size_divisor=32,
         flip_ratio=0,
         with_mask=False,
-        with_crowd=False,
-        with_label=False),
+        with_crowd=True,
+        with_label=True),
     test=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',
@@ -192,7 +194,7 @@ total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
-load_from = None
+load_from = './weights/faster_rcnn_r50_fpn_1x_20181010-3d1b3351.pth'
 resume_from = None
 workflow = [('train', 1)]
 
