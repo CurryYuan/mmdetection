@@ -65,46 +65,24 @@ class FAOursHead(AnchorHead):
             self.in_channels, self.feat_channels, 3, padding=1)
         self.rpn_reg = nn.Conv2d(self.feat_channels, self.num_anchors * 4, 1)
 
-        self.feature_adaption1 = FeatureAdaption(
-            1,
+        self.feature_adaption = FeatureAdaption(
+            self.num_anchors,
             self.feat_channels,
             self.feat_channels,
             kernel_size=3,
             deformable_groups=self.deformable_groups)
-
-        self.feature_adaption2 = FeatureAdaption(
-            1,
-            self.feat_channels,
-            self.feat_channels,
-            kernel_size=3,
-            deformable_groups=self.deformable_groups)
-
-        self.feature_adaption3 = FeatureAdaption(
-            1,
-            self.feat_channels,
-            self.feat_channels,
-            kernel_size=3,
-            deformable_groups=self.deformable_groups)
-
-        self.feature_conv = nn.Conv2d(3*self.feat_channels, self.feat_channels, 1, padding=0)
 
     def init_weights(self):
         normal_init(self.rpn_conv, std=0.01)
         normal_init(self.rpn_reg, std=0.01)
-        normal_init(self.feature_conv, std=0.01)
 
-        self.feature_adaption1.init_weights()
-        self.feature_adaption2.init_weights()
-        self.feature_adaption3.init_weights()
+        self.feature_adaption.init_weights()
 
     def forward_single(self, x):
         x = self.rpn_conv(x)
         x = F.relu(x, inplace=True)
         rpn_bbox_pred = self.rpn_reg(x)
-        x1 = self.feature_adaption1(x, rpn_bbox_pred[:, :4, :, :])
-        x2 = self.feature_adaption2(x, rpn_bbox_pred[:, 4:8, :, :])
-        x3 = self.feature_adaption3(x, rpn_bbox_pred[:, 8:12, :, :])
-        x = self.feature_conv(torch.cat([x1, x2, x3], 1))
+        x = self.feature_adaption(x, rpn_bbox_pred)
         return x, rpn_bbox_pred
 
     def loss(self,
