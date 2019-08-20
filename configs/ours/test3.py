@@ -8,7 +8,7 @@ model = dict(
         depth=50,
         num_stages=4,
         out_indices=(0, 1, 2, 3),
-        frozen_stages=4,
+        frozen_stages=1,
         style='pytorch'),
     neck=dict(
         type='FPN',
@@ -27,7 +27,7 @@ model = dict(
             target_stds=[1.0, 1.0, 1.0, 1.0],
             loss_cls=dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=0.0),
-            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=0.0)),
+            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
         dict(
             type='OursHead',
             in_channels=256,
@@ -38,8 +38,8 @@ model = dict(
             target_means=[.0, .0, .0, .0],
             target_stds=[1.0, 1.0, 1.0, 1.0],
             loss_cls=dict(
-                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=0.0),
-            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=0.0))
+                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
+            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0))
     ],
     bbox_roi_extractor=dict(
         type='SingleRoIExtractor',
@@ -194,7 +194,7 @@ total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
-load_from = './weights/epoch_12.pth'
+load_from = None
 resume_from = None
 workflow = [('train', 1)]
 
