@@ -8,7 +8,7 @@ model = dict(
         depth=50,
         num_stages=4,
         out_indices=(0, 1, 2, 3),
-        frozen_stages=1,
+        frozen_stages=4,
         style='pytorch'),
     neck=dict(
         type='FPN',
@@ -27,7 +27,7 @@ model = dict(
             target_stds=[1.0, 1.0, 1.0, 1.0],
             loss_cls=dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=0.0),
-            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
+            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=0.0)),
         dict(
             type='OursHead',
             in_channels=256,
@@ -38,8 +38,8 @@ model = dict(
             target_means=[.0, .0, .0, .0],
             target_stds=[1.0, 1.0, 1.0, 1.0],
             loss_cls=dict(
-                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
-            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0))
+                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=0.0),
+            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=0.0))
     ],
     bbox_roi_extractor=dict(
         type='SingleRoIExtractor',
@@ -171,7 +171,7 @@ data = dict(
         with_label=False,
         test_mode=True))
 # optimizer
-optimizer = dict(type='SGD', lr=0.04, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.06, momentum=0.9, weight_decay=0.0001)
 # runner configs
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 lr_config = dict(
@@ -194,7 +194,7 @@ total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
-load_from = './weights/faster_rcnn_r50_fpn_1x_20181010-3d1b3351.pth'
+load_from = './weights/epoch_12.pth'
 resume_from = None
 workflow = [('train', 1)]
 
