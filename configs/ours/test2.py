@@ -17,7 +17,7 @@ model = dict(
         num_outs=5),
     rpn_head=[
         dict(
-            type='OursHead',
+            type='FAOursHead',
             in_channels=256,
             feat_channels=256,
             anchor_scales=[8],
@@ -171,7 +171,7 @@ data = dict(
         with_label=False,
         test_mode=True))
 # optimizer
-optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 # runner configs
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 lr_config = dict(
@@ -194,7 +194,7 @@ total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
-load_from = './weights/faster_rcnn_r50_fpn_1x_20181010-3d1b3351.pth'
+load_from = './weights/epoch_12.pth'
 resume_from = None
 workflow = [('train', 1)]
 

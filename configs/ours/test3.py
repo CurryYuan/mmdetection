@@ -65,9 +65,9 @@ train_cfg = dict(
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.7,
-                neg_iou_thr=0.3,
-                min_pos_iou=0.3,
+                pos_iou_thr=0.5,
+                neg_iou_thr=0.5,
+                min_pos_iou=0.5,
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
@@ -81,9 +81,9 @@ train_cfg = dict(
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.5,
-                neg_iou_thr=0.5,
-                min_pos_iou=0.5,
+                pos_iou_thr=0.6,
+                neg_iou_thr=0.6,
+                min_pos_iou=0.6,
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
@@ -105,9 +105,9 @@ train_cfg = dict(
     rcnn=dict(
         assigner=dict(
             type='MaxIoUAssigner',
-            pos_iou_thr=0.5,
-            neg_iou_thr=0.5,
-            min_pos_iou=0.5,
+            pos_iou_thr=0.6,
+            neg_iou_thr=0.6,
+            min_pos_iou=0.6,
             ignore_iof_thr=-1),
         sampler=dict(
             type='RandomSampler',
@@ -171,7 +171,7 @@ data = dict(
         with_label=False,
         test_mode=True))
 # optimizer
-optimizer = dict(type='SGD', lr=0.04, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.06, momentum=0.9, weight_decay=0.0001)
 # runner configs
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 lr_config = dict(
@@ -194,7 +194,7 @@ total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
-load_from = './weights/faster_rcnn_r50_fpn_1x_20181010-3d1b3351.pth'
+load_from = None
 resume_from = None
 workflow = [('train', 1)]
 
