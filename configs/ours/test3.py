@@ -1,7 +1,7 @@
 # model settings
 model = dict(
-    type='MyFaRPN',
-    num_stages=1,
+    type='MyDetector',
+    num_stages=2,
     pretrained='modelzoo://resnet50',
     backbone=dict(
         type='ResNet',
@@ -26,22 +26,10 @@ model = dict(
             target_means=[.0, .0, .0, .0],
             target_stds=[1.0, 1.0, 1.0, 1.0],
             loss_cls=dict(
-                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
+                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=0.0),
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
         dict(
-            type='FAOursHead',
-            in_channels=256,
-            feat_channels=256,
-            anchor_scales=[8],
-            anchor_ratios=[0.5, 1.0, 2.0],
-            anchor_strides=[4, 8, 16, 32, 64],
-            target_means=[.0, .0, .0, .0],
-            target_stds=[1.0, 1.0, 1.0, 1.0],
-            loss_cls=dict(
-                type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
-            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
-        dict(
-            type='FAOursHead',
+            type='OursHead',
             in_channels=256,
             feat_channels=256,
             anchor_scales=[8],
@@ -52,7 +40,25 @@ model = dict(
             loss_cls=dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0))
-    ])
+    ],
+    bbox_roi_extractor=dict(
+        type='SingleRoIExtractor',
+        roi_layer=dict(type='RoIAlign', out_size=7, sample_num=2),
+        out_channels=256,
+        featmap_strides=[4, 8, 16, 32]),
+    bbox_head=dict(
+        type='SharedFCBBoxHead',
+        num_fcs=2,
+        in_channels=256,
+        fc_out_channels=1024,
+        roi_feat_size=7,
+        num_classes=81,
+        target_means=[0., 0., 0., 0.],
+        target_stds=[0.1, 0.1, 0.2, 0.2],
+        reg_class_agnostic=False,
+        loss_cls=dict(
+            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
+        loss_bbox=dict(type='SmoothL1Loss', beta=1.0, loss_weight=1.0)))
 # model training and testing settings
 train_cfg = dict(
     rpn=[
@@ -75,25 +81,9 @@ train_cfg = dict(
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.7,
-                neg_iou_thr=0.3,
-                min_pos_iou=0.3,
-                ignore_iof_thr=-1),
-            sampler=dict(
-                type='RandomSampler',
-                num=256,
-                pos_fraction=0.5,
-                neg_pos_ub=-1,
-                add_gt_as_proposals=False),
-            allowed_border=0,
-            pos_weight=-1,
-            debug=False),
-        dict(
-            assigner=dict(
-                type='MaxIoUAssigner',
-                pos_iou_thr=0.7,
-                neg_iou_thr=0.7,
-                min_pos_iou=0.7,
+                pos_iou_thr=0.5,
+                neg_iou_thr=0.5,
+                min_pos_iou=0.5,
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
@@ -127,7 +117,7 @@ train_cfg = dict(
             add_gt_as_proposals=True),
         pos_weight=-1,
         debug=False),
-    stage_loss_weights=[1, 0.5, 0.25])
+    stage_loss_weights=[1, 1, 1])
 test_cfg = dict(
     rpn=dict(
         nms_across_levels=False,
@@ -141,12 +131,12 @@ test_cfg = dict(
     keep_all_stages=False)
 # dataset settings
 dataset_type = 'CocoDataset'
-data_root = '/home/season/data/coco/'
+data_root = 'data/coco/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 data = dict(
-    imgs_per_gpu=4,
-    workers_per_gpu=2,
+    imgs_per_gpu=12,
+    workers_per_gpu=12,
     train=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_train2017.json',
@@ -156,8 +146,8 @@ data = dict(
         size_divisor=32,
         flip_ratio=0.5,
         with_mask=False,
-        with_crowd=False,
-        with_label=False),
+        with_crowd=True,
+        with_label=True),
     val=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',
@@ -167,8 +157,8 @@ data = dict(
         size_divisor=32,
         flip_ratio=0,
         with_mask=False,
-        with_crowd=False,
-        with_label=False),
+        with_crowd=True,
+        with_label=True),
     test=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',
@@ -181,7 +171,7 @@ data = dict(
         with_label=False,
         test_mode=True))
 # optimizer
-optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.04, momentum=0.9, weight_decay=0.0001)
 # runner configs
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 lr_config = dict(
@@ -203,8 +193,8 @@ log_config = dict(
 total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/ga_ours_rpn'
-load_from = None
+work_dir = './work_dirs/CascadeRPN'
+load_from = './weights/faster_rcnn_r50_fpn_1x_20181010-3d1b3351.pth'
 resume_from = None
 workflow = [('train', 1)]
 
