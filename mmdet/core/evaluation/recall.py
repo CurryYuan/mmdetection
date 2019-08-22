@@ -110,7 +110,7 @@ def eval_recalls(gts,
 
         all_ious.append(ious)
     all_ious = np.array(all_ious)
-
+    np.save('work_dirs/ious.npy', all_ious)
     recalls = _recalls(proposals, all_ious, proposal_nums, iou_thrs)
     if print_summary:
         print_recall_summary(recalls, proposal_nums, iou_thrs)
