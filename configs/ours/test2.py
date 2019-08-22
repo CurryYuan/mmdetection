@@ -1,6 +1,6 @@
 # model settings
 model = dict(
-    type='MyDetector',
+    type='MyFaRPN',
     num_stages=2,
     pretrained='modelzoo://resnet50',
     backbone=dict(
@@ -40,34 +40,16 @@ model = dict(
             loss_cls=dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0))
-    ],
-    bbox_roi_extractor=dict(
-        type='SingleRoIExtractor',
-        roi_layer=dict(type='RoIAlign', out_size=7, sample_num=2),
-        out_channels=256,
-        featmap_strides=[4, 8, 16, 32]),
-    bbox_head=dict(
-        type='SharedFCBBoxHead',
-        num_fcs=2,
-        in_channels=256,
-        fc_out_channels=1024,
-        roi_feat_size=7,
-        num_classes=81,
-        target_means=[0., 0., 0., 0.],
-        target_stds=[0.1, 0.1, 0.2, 0.2],
-        reg_class_agnostic=False,
-        loss_cls=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
-        loss_bbox=dict(type='SmoothL1Loss', beta=1.0, loss_weight=1.0)))
+    ])
 # model training and testing settings
 train_cfg = dict(
     rpn=[
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.7,
-                neg_iou_thr=0.3,
-                min_pos_iou=0.3,
+                pos_iou_thr=0.5,
+                neg_iou_thr=0.5,
+                min_pos_iou=0.5,
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
@@ -81,9 +63,9 @@ train_cfg = dict(
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.5,
-                neg_iou_thr=0.5,
-                min_pos_iou=0.5,
+                pos_iou_thr=0.6,
+                neg_iou_thr=0.6,
+                min_pos_iou=0.6,
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
@@ -105,9 +87,9 @@ train_cfg = dict(
     rcnn=dict(
         assigner=dict(
             type='MaxIoUAssigner',
-            pos_iou_thr=0.5,
-            neg_iou_thr=0.5,
-            min_pos_iou=0.5,
+            pos_iou_thr=0.6,
+            neg_iou_thr=0.6,
+            min_pos_iou=0.6,
             ignore_iof_thr=-1),
         sampler=dict(
             type='RandomSampler',
@@ -135,8 +117,8 @@ data_root = 'data/coco/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 data = dict(
-    imgs_per_gpu=8,
-    workers_per_gpu=8,
+    imgs_per_gpu=12,
+    workers_per_gpu=12,
     train=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_train2017.json',
@@ -147,7 +129,7 @@ data = dict(
         flip_ratio=0.5,
         with_mask=False,
         with_crowd=True,
-        with_label=True),
+        with_label=False),
     val=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',
@@ -158,7 +140,7 @@ data = dict(
         flip_ratio=0,
         with_mask=False,
         with_crowd=True,
-        with_label=True),
+        with_label=False),
     test=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',
@@ -171,7 +153,7 @@ data = dict(
         with_label=False,
         test_mode=True))
 # optimizer
-optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.06, momentum=0.9, weight_decay=0.0001)
 # runner configs
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 lr_config = dict(
@@ -194,7 +176,7 @@ total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = './work_dirs/CascadeRPN'
-load_from = './weights/epoch_12.pth'
+load_from = None
 resume_from = None
 workflow = [('train', 1)]
 
