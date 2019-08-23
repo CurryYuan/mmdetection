@@ -2,16 +2,14 @@
 model = dict(
     type='MyDetector',
     num_stages=2,
-    pretrained='open-mmlab://resnet50_caffe',
+    pretrained='modelzoo://resnet50',
     backbone=dict(
         type='ResNet',
         depth=50,
         num_stages=4,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
-        norm_cfg=dict(type='BN', requires_grad=False),
-        norm_eval=True,
-        style='caffe'),
+        style='pytorch'),
     neck=dict(
         type='FPN',
         in_channels=[256, 512, 1024, 2048],
@@ -26,8 +24,8 @@ model = dict(
             anchor_ratios=[0.5, 1.0, 2.0],
             anchor_strides=[4, 8, 16, 32, 64],
             target_means=[.0, .0, .0, .0],
-            target_stds=[0.07, 0.07, 0.11, 0.11],
-            loss_bbox=dict(type='SmoothL1Loss', beta=1.0, loss_weight=1.0)),
+            target_stds=[1.0, 1.0, 1.0, 1.0],
+            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0)),
         dict(
             type='OursHead',
             in_channels=256,
@@ -36,10 +34,10 @@ model = dict(
             anchor_ratios=[0.5, 1.0, 2.0],
             anchor_strides=[4, 8, 16, 32, 64],
             target_means=[.0, .0, .0, .0],
-            target_stds=[0.07, 0.07, 0.11, 0.11],
+            target_stds=[1.0, 1.0, 1.0, 1.0],
             loss_cls=dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
-            loss_bbox=dict(type='SmoothL1Loss', beta=1.0, loss_weight=1.0))
+            loss_bbox=dict(type='SmoothL1Loss', beta=1.0 / 9.0, loss_weight=1.0))
     ],
     bbox_roi_extractor=dict(
         type='SingleRoIExtractor',
@@ -54,7 +52,7 @@ model = dict(
         roi_feat_size=7,
         num_classes=81,
         target_means=[0., 0., 0., 0.],
-        target_stds=[0.05, 0.05, 0.1, 0.1],
+        target_stds=[0.1, 0.1, 0.2, 0.2],
         reg_class_agnostic=False,
         loss_cls=dict(
             type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
@@ -171,7 +169,7 @@ data = dict(
         with_label=False,
         test_mode=True))
 # optimizer
-optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.005, momentum=0.9, weight_decay=0.0001)
 # runner configs
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 lr_config = dict(
