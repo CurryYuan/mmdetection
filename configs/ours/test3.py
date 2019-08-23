@@ -26,7 +26,7 @@ model = dict(
             anchor_ratios=[0.5, 1.0, 2.0],
             anchor_strides=[4, 8, 16, 32, 64],
             target_means=[.0, .0, .0, .0],
-            target_stds=[1.0, 1.0, 1.0, 1.0],
+            target_stds=[0.07, 0.07, 0.11, 0.11],
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0, loss_weight=1.0)),
         dict(
             type='OursHead',
@@ -36,7 +36,7 @@ model = dict(
             anchor_ratios=[0.5, 1.0, 2.0],
             anchor_strides=[4, 8, 16, 32, 64],
             target_means=[.0, .0, .0, .0],
-            target_stds=[1.0, 1.0, 1.0, 1.0],
+            target_stds=[0.07, 0.07, 0.11, 0.11],
             loss_cls=dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0),
             loss_bbox=dict(type='SmoothL1Loss', beta=1.0, loss_weight=1.0))
@@ -54,7 +54,7 @@ model = dict(
         roi_feat_size=7,
         num_classes=81,
         target_means=[0., 0., 0., 0.],
-        target_stds=[0.1, 0.1, 0.2, 0.2],
+        target_stds=[0.05, 0.05, 0.1, 0.1],
         reg_class_agnostic=False,
         loss_cls=dict(
             type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
