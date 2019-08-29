@@ -94,4 +94,4 @@ class RPN(BaseDetector, RPNTestMixin):
         for img, img_meta in zip(imgs, img_metas):
             h, w, _ = img_meta['img_shape']
             img_show = img[:h, :w, :]
-            mmcv.imshow_bboxes(img_show, result, top_k=top_k)
+            mmcv.imshow_bboxes(img_show, result, top_k=100)
