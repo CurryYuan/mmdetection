@@ -141,8 +141,8 @@ train_cfg = dict(
         nms_across_levels=False,
         nms_pre=2000,
         nms_post=2000,
-        max_num=2000,
-        nms_thr=0.7,
+        max_num=1000,
+        nms_thr=0.9,
         min_bbox_size=0),
     rcnn=[
         dict(
@@ -195,14 +195,14 @@ train_cfg = dict(
 test_cfg = dict(
     rpn=dict(
         nms_across_levels=False,
-        nms_pre=1000,
-        nms_post=1000,
+        nms_pre=2000,
+        nms_post=2000,
         max_num=1000,
-        nms_thr=0.7,
+        nms_thr=0.9,
         min_bbox_size=0),
     rcnn=dict(
         score_thr=0.05, nms=dict(type='nms', iou_thr=0.5), max_per_img=100),
-    keep_all_stages=False)
+    keep_all_stages=True)
 # dataset settings
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
@@ -245,7 +245,7 @@ data = dict(
         with_label=False,
         test_mode=True))
 # optimizer
-optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.005, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
 lr_config = dict(
@@ -267,7 +267,7 @@ log_config = dict(
 total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/ours_cascade_rcnn_r50_fpn_1x'
+work_dir = './work_dirs/pgn_cascade_rcnn_r50_fpn_1x'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
