@@ -108,7 +108,7 @@ test_cfg = dict(
         nms_pre=2000,
         nms_post=2000,
         max_num=2000,
-        nms_thr=0.8,
+        nms_thr=0.9,
         min_bbox_size=0),
     rcnn=dict(
         score_thr=0.05, nms=dict(type='nms', iou_thr=0.5), max_per_img=100),
@@ -177,7 +177,7 @@ log_config = dict(
 total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/CascadeRPN'
+work_dir = './work_dirs/pgn_3stage'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]

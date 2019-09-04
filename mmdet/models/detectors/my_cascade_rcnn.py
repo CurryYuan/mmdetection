@@ -294,11 +294,11 @@ class MyCascadeRCNN(BaseDetector, RPNTestMixin):
         proposal_list = proposals
         y = x
 
-        for i in range(self.num_stages):
+        for i in range(self.rpn_stages):
             y, *rpn_outs = self.rpn_head[i](y)
             rpn_outs = tuple(rpn_outs)
 
-            if i == self.num_stages - 1:
+            if i == self.rpn_stages - 1:
                 proposal_cfg = self.test_cfg.get('rpn_proposal', self.test_cfg.rpn)
                 proposal_inputs = rpn_outs + (img_meta, proposal_cfg, proposal_list)
                 proposal_list = self.rpn_head[i].get_bboxes(*proposal_inputs)
