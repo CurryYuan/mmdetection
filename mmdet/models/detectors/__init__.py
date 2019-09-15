@@ -12,6 +12,7 @@ from .refinedet import RefineDet
 from .my_detector import MyDetector
 from .my_rpn import MyRPN
 from .my_fa_rpn import MyFaRPN
+from .reppoints_detector import RepPointsDetector
 from .retinanet import RetinaNet
 from .rpn import RPN
 from .single_stage import SingleStageDetector
@@ -24,4 +25,6 @@ __all__ = [
     'RetinaNet', 'FCOS', 'GridRCNN', 'MaskScoringRCNN', 'RefineDet', 'MyDetector',
     'MyRPN', 'MyFaRPN', 'MyCascadeRCNN',
     'DoubleHeadRCNN', 'RetinaNet', 'FCOS', 'GridRCNN', 'MaskScoringRCNN'
+    'DoubleHeadRCNN', 'RetinaNet', 'FCOS', 'GridRCNN', 'MaskScoringRCNN',
+    'RepPointsDetector'
 ]
