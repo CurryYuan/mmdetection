@@ -14,6 +14,6 @@ from .fa_ours_head import FAOursHead
 __all__ = [
     'AnchorHead', 'GuidedAnchorHead', 'FeatureAdaption', 'RPNHead',
     'GARPNHead', 'RetinaHead', 'GARetinaHead', 'SSDHead', 'FCOSHead',
-    'RefineDetHead', 'OursHead', 'FAOursHead'
+    'RefineDetHead', 'OursHead', 'FAOursHead',
     'RepPointsHead'
 ]
