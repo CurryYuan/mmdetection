@@ -118,6 +118,7 @@ data
 *.log.json
 work_dirs/
 weights/
+work_dirs
 
 # Pytorch
 *.pth

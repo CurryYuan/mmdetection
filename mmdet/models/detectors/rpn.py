@@ -1,4 +1,5 @@
 import mmcv
+import torch.nn as nn
 
 from mmdet.core import bbox_mapping, tensor2imgs
 from .. import builder
@@ -29,7 +30,11 @@ class RPN(BaseDetector, RPNTestMixin):
         super(RPN, self).init_weights(pretrained)
         self.backbone.init_weights(pretrained=pretrained)
         if self.with_neck:
-            self.neck.init_weights()
+            if isinstance(self.neck, nn.Sequential):
+                for m in self.neck:
+                    m.init_weights()
+            else:
+                self.neck.init_weights()
         self.rpn_head.init_weights()
 
     def extract_feat(self, img):
