@@ -76,7 +76,7 @@ def fast_eval_recall(results,
         gt_bboxes.append(bboxes)
 
     recalls = eval_recalls(
-        gt_bboxes, results, max_dets, iou_thrs, print_summary=False)
+        gt_bboxes, results, max_dets, iou_thrs, print_summary=True)
     ar = recalls.mean(axis=1)
     return ar
 

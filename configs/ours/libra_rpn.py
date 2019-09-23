@@ -58,49 +58,56 @@ test_cfg = dict(
         nms_pre=2000,
         nms_post=2000,
         max_num=2000,
-        nms_thr=0.7,
+        nms_thr=0.9,
         min_bbox_size=0))
 # dataset settings
 dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations', with_bbox=True, with_label=False),
+    dict(type='Resize', img_scale=(1333, 800), keep_ratio=True),
+    dict(type='RandomFlip', flip_ratio=0.5),
+    dict(type='Normalize', **img_norm_cfg),
+    dict(type='Pad', size_divisor=32),
+    dict(type='DefaultFormatBundle'),
+    dict(type='Collect', keys=['img', 'gt_bboxes']),
+]
+test_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(
+        type='MultiScaleFlipAug',
+        img_scale=(1333, 800),
+        flip=False,
+        transforms=[
+            dict(type='Resize', keep_ratio=True),
+            dict(type='RandomFlip'),
+            dict(type='Normalize', **img_norm_cfg),
+            dict(type='Pad', size_divisor=32),
+            dict(type='ImageToTensor', keys=['img']),
+            dict(type='Collect', keys=['img']),
+        ])
+]
 data = dict(
-    imgs_per_gpu=2,
+    imgs_per_gpu=4,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_train2017.json',
         img_prefix=data_root + 'train2017/',
-        img_scale=(1333, 800),
-        img_norm_cfg=img_norm_cfg,
-        size_divisor=32,
-        flip_ratio=0.5,
-        with_mask=False,
-        with_crowd=False,
-        with_label=False),
+        pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',
         img_prefix=data_root + 'val2017/',
-        img_scale=(1333, 800),
-        img_norm_cfg=img_norm_cfg,
-        size_divisor=32,
-        flip_ratio=0,
-        with_mask=False,
-        with_crowd=False,
-        with_label=False),
+        pipeline=test_pipeline),
     test=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',
         img_prefix=data_root + 'val2017/',
-        img_scale=(1333, 800),
-        img_norm_cfg=img_norm_cfg,
-        size_divisor=32,
-        flip_ratio=0,
-        with_mask=False,
-        with_label=False,
-        test_mode=True))
+        pipeline=test_pipeline))
 # optimizer
 optimizer = dict(type='SGD', lr=0.005, momentum=0.9, weight_decay=0.0001)
 # runner configs
