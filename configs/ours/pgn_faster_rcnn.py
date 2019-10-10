@@ -63,9 +63,9 @@ train_cfg = dict(
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.5,
-                neg_iou_thr=0.5,
-                min_pos_iou=0.5,
+                pos_iou_thr=0.7,
+                neg_iou_thr=0.3,
+                min_pos_iou=0.3,
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
@@ -79,9 +79,9 @@ train_cfg = dict(
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.6,
-                neg_iou_thr=0.6,
-                min_pos_iou=0.6,
+                pos_iou_thr=0.7,
+                neg_iou_thr=0.3,
+                min_pos_iou=0.3,
                 ignore_iof_thr=-1),
             sampler=dict(
                 type='RandomSampler',
@@ -97,36 +97,36 @@ train_cfg = dict(
         nms_across_levels=False,
         nms_pre=2000,
         nms_post=2000,
-        max_num=1000,
-        nms_thr=0.9,
+        max_num=2000,
+        nms_thr=0.7,
         min_bbox_size=0),
     rcnn=dict(
         assigner=dict(
             type='MaxIoUAssigner',
-            pos_iou_thr=0.6,
-            neg_iou_thr=0.6,
-            min_pos_iou=0.6,
+            pos_iou_thr=0.5,
+            neg_iou_thr=0.5,
+            min_pos_iou=0.5,
             ignore_iof_thr=-1),
         sampler=dict(
             type='RandomSampler',
             num=512,
-            pos_fraction=0.5,
+            pos_fraction=0.25,
             neg_pos_ub=-1,
             add_gt_as_proposals=True),
         pos_weight=-1,
         debug=False),
-    stage_loss_weights=[1, 1, 1])
+    stage_loss_weights=[0.5, 1])
 test_cfg = dict(
     rpn=dict(
         nms_across_levels=False,
         nms_pre=2000,
         nms_post=2000,
         max_num=1000,
-        nms_thr=0.9,
+        nms_thr=0.7,
         min_bbox_size=0),
     rcnn=dict(
-        # score_thr=0.05, nms=dict(type='nms', iou_thr=0.5),
-        score_thr=0.05, nms=dict(type='soft_nms', iou_thr=0.5, min_score=0.05),
+        score_thr=0.05, nms=dict(type='nms', iou_thr=0.5),
+        # score_thr=0.05, nms=dict(type='soft_nms', iou_thr=0.5, min_score=0.05),
         max_per_img=100)
 )
 # dataset settings
@@ -134,6 +134,31 @@ dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations', with_bbox=True),
+    dict(type='Resize', img_scale=(1333, 800), keep_ratio=True),
+    dict(type='RandomFlip', flip_ratio=0.5),
+    dict(type='Normalize', **img_norm_cfg),
+    dict(type='Pad', size_divisor=32),
+    dict(type='DefaultFormatBundle'),
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
+]
+test_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(
+        type='MultiScaleFlipAug',
+        img_scale=(1333, 800),
+        flip=False,
+        transforms=[
+            dict(type='Resize', keep_ratio=True),
+            dict(type='RandomFlip'),
+            dict(type='Normalize', **img_norm_cfg),
+            dict(type='Pad', size_divisor=32),
+            dict(type='ImageToTensor', keys=['img']),
+            dict(type='Collect', keys=['img']),
+        ])
+]
 data = dict(
     imgs_per_gpu=2,
     workers_per_gpu=2,
@@ -141,37 +166,17 @@ data = dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_train2017.json',
         img_prefix=data_root + 'train2017/',
-        img_scale=(1333, 800),
-        img_norm_cfg=img_norm_cfg,
-        size_divisor=32,
-        flip_ratio=0.5,
-        with_mask=False,
-        with_crowd=True,
-        with_label=True),
+        pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',
         img_prefix=data_root + 'val2017/',
-        img_scale=(1333, 800),
-        img_norm_cfg=img_norm_cfg,
-        size_divisor=32,
-        flip_ratio=0,
-        with_mask=False,
-        with_crowd=True,
-        with_label=True),
+        pipeline=test_pipeline),
     test=dict(
         type=dataset_type,
-        # ann_file=data_root + 'annotations/instances_val2017.json',
-        # img_prefix=data_root + 'val2017/',
-        ann_file=data_root + 'annotations/image_info_test-dev2017.json',
-        img_prefix=data_root + 'test2017/',
-        img_scale=(1333, 800),
-        img_norm_cfg=img_norm_cfg,
-        size_divisor=32,
-        flip_ratio=0,
-        with_mask=False,
-        with_label=False,
-        test_mode=True))
+        ann_file=data_root + 'annotations/instances_val2017.json',
+        img_prefix=data_root + 'val2017/',
+        pipeline=test_pipeline))
 # optimizer
 optimizer = dict(type='SGD', lr=0.005, momentum=0.9, weight_decay=0.0001)
 # runner configs
@@ -185,7 +190,7 @@ lr_config = dict(
 checkpoint_config = dict(interval=1)
 # yapf:disable
 log_config = dict(
-    interval=50,
+    interval=100,
     hooks=[
         dict(type='TextLoggerHook'),
         # dict(type='TensorboardLoggerHook')
@@ -195,7 +200,7 @@ log_config = dict(
 total_epochs = 12
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/CascadeRPN'
+work_dir = './work_dirs/pgn_faster_rcnn'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]

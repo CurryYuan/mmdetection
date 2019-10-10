@@ -2,7 +2,7 @@
 model = dict(
     type='MyFaRPN',
     num_stages=2,
-    pretrained='modelzoo://resnet50',
+    pretrained='torchvision://resnet50',
     backbone=dict(
         type='ResNet',
         depth=50,
@@ -45,7 +45,7 @@ train_cfg = dict(
         dict(
             assigner=dict(
                 type='MaxIoUAssigner',
-                pos_iou_thr=0.7,
+                pos_iou_thr=0.8,
                 neg_iou_thr=0.3,
                 min_pos_iou=0.3,
                 ignore_iof_thr=-1),
@@ -75,7 +75,7 @@ train_cfg = dict(
             pos_weight=-1,
             debug=False)
         ],
-    stage_loss_weights=[1, 1, 1])
+    stage_loss_weights=[0.5, 1])
 test_cfg = dict(
     rpn=dict(
         nms_across_levels=False,
